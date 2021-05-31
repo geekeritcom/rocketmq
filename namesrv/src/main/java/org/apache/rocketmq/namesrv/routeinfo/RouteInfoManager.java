@@ -111,9 +111,11 @@ public class RouteInfoManager {
         RegisterBrokerResult result = new RegisterBrokerResult();
         try {
             try {
+                // 持有独占锁进行Broker注册来保证线程安全性
                 this.lock.writeLock().lockInterruptibly();
-
+                // 首先查看该Broker所在集群是否已经有Broker机器注册
                 Set<String> brokerNames = this.clusterAddrTable.get(clusterName);
+                // 不存在时首先构建该Broker集群的容器
                 if (null == brokerNames) {
                     brokerNames = new HashSet<String>();
                     this.clusterAddrTable.put(clusterName, brokerNames);
@@ -121,7 +123,7 @@ public class RouteInfoManager {
                 brokerNames.add(brokerName);
 
                 boolean registerFirst = false;
-
+                // 根据BrokerName来获取对应Broker的机器数据，不存在时进行初始化
                 BrokerData brokerData = this.brokerAddrTable.get(brokerName);
                 if (null == brokerData) {
                     registerFirst = true;
@@ -134,14 +136,16 @@ public class RouteInfoManager {
                 Iterator<Entry<Long, String>> it = brokerAddrsMap.entrySet().iterator();
                 while (it.hasNext()) {
                     Entry<Long, String> item = it.next();
+                    // 当Broker的ID发生了变化，但是地址还是不变时说明发生了节点身份的变化，首先移除旧的记录
                     if (null != brokerAddr && brokerAddr.equals(item.getValue()) && brokerId != item.getKey()) {
                         it.remove();
                     }
                 }
-
+                // 这里如果不存在旧的记录也说明属于首次注册
                 String oldAddr = brokerData.getBrokerAddrs().put(brokerId, brokerAddr);
                 registerFirst = registerFirst || (null == oldAddr);
 
+                // 当此处注册的Broker属于集群中的master节点并且注册时携带了集群中Topic的配置信息时，需要对维护的Topic配置进行更新
                 if (null != topicConfigWrapper
                     && MixAll.MASTER_ID == brokerId) {
                     if (this.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.getDataVersion())
@@ -155,7 +159,7 @@ public class RouteInfoManager {
                         }
                     }
                 }
-
+                // 构造当前Broker的存活信息
                 BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddr,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
@@ -165,7 +169,7 @@ public class RouteInfoManager {
                 if (null == prevBrokerLiveInfo) {
                     log.info("new broker registered, {} HAServer: {}", brokerAddr, haServerAddr);
                 }
-
+                // 设置Broker对应的filter
                 if (filterServerList != null) {
                     if (filterServerList.isEmpty()) {
                         this.filterServerTable.remove(brokerAddr);
@@ -174,6 +178,7 @@ public class RouteInfoManager {
                     }
                 }
 
+                // 如果当前Broker不属于集群中的master节点时，将所属master节点的地址以及HA地址封装到响应信息中
                 if (MixAll.MASTER_ID != brokerId) {
                     String masterAddr = brokerData.getBrokerAddrs().get(MixAll.MASTER_ID);
                     if (masterAddr != null) {
@@ -752,6 +757,9 @@ public class RouteInfoManager {
     }
 }
 
+/**
+ * 用于维护保持存活的Broker的相关信息
+ */
 class BrokerLiveInfo {
     private long lastUpdateTimestamp;
     private DataVersion dataVersion;
