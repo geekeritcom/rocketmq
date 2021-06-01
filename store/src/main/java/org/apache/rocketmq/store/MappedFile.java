@@ -278,6 +278,7 @@ public class MappedFile extends ReferenceResource {
                     if (writeBuffer != null || this.fileChannel.position() != 0) {
                         this.fileChannel.force(false);
                     } else {
+                        // 强制刷盘
                         this.mappedByteBuffer.force();
                     }
                 } catch (Throwable e) {
