@@ -1344,19 +1344,29 @@ public class MQClientAPIImpl {
     }
 
     public TopicRouteData getDefaultTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis)
-        throws RemotingException, MQClientException, InterruptedException {
+            throws RemotingException, MQClientException, InterruptedException {
 
         return getTopicRouteInfoFromNameServer(topic, timeoutMillis, false);
     }
 
+    /**
+     * 向NameServer拉取指定topic的数据
+     *
+     * @param topic         topic的名称
+     * @param timeoutMillis 超时
+     * @return
+     * @throws RemotingException
+     * @throws MQClientException
+     * @throws InterruptedException
+     */
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis)
-        throws RemotingException, MQClientException, InterruptedException {
+            throws RemotingException, MQClientException, InterruptedException {
 
         return getTopicRouteInfoFromNameServer(topic, timeoutMillis, true);
     }
 
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis,
-        boolean allowTopicNotExist) throws MQClientException, InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException {
+                                                          boolean allowTopicNotExist) throws MQClientException, InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException {
         GetRouteInfoRequestHeader requestHeader = new GetRouteInfoRequestHeader();
         requestHeader.setTopic(topic);
 
@@ -1373,6 +1383,7 @@ public class MQClientAPIImpl {
                 break;
             }
             case ResponseCode.SUCCESS: {
+                // 当对应数据返回时解码后返回topic的数据
                 byte[] body = response.getBody();
                 if (body != null) {
                     return TopicRouteData.decode(body, TopicRouteData.class);
