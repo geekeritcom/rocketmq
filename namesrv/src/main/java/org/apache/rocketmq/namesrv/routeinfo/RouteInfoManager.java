@@ -148,10 +148,13 @@ public class RouteInfoManager {
                 // 当此处注册的Broker属于集群中的master节点并且注册时携带了集群中Topic的配置信息时，需要对维护的Topic配置进行更新
                 if (null != topicConfigWrapper
                     && MixAll.MASTER_ID == brokerId) {
+                    // 需要创建更新Broker队列数据的条件：
+                    // 1.基于数据版本对比配置发生了变化
+                    // 2.首次注册
                     if (this.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.getDataVersion())
-                        || registerFirst) {
+                            || registerFirst) {
                         ConcurrentMap<String, TopicConfig> tcTable =
-                            topicConfigWrapper.getTopicConfigTable();
+                                topicConfigWrapper.getTopicConfigTable();
                         if (tcTable != null) {
                             for (Map.Entry<String, TopicConfig> entry : tcTable.entrySet()) {
                                 this.createAndUpdateQueueData(brokerName, entry.getValue());
@@ -159,7 +162,7 @@ public class RouteInfoManager {
                         }
                     }
                 }
-                // 构造当前Broker的存活信息
+                // 构造当前Broker的存活信息（Broker数据版本，通信Channel等）
                 BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddr,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
@@ -219,6 +222,12 @@ public class RouteInfoManager {
         }
     }
 
+    /**
+     * 创建更新Topic下的queue的数据
+     *
+     * @param brokerName  broker名称
+     * @param topicConfig 当前Topic的配置
+     */
     private void createAndUpdateQueueData(final String brokerName, final TopicConfig topicConfig) {
         QueueData queueData = new QueueData();
         queueData.setBrokerName(brokerName);
@@ -227,7 +236,9 @@ public class RouteInfoManager {
         queueData.setPerm(topicConfig.getPerm());
         queueData.setTopicSynFlag(topicConfig.getTopicSysFlag());
 
+        // 首先确认该Topic下是否已经存在队列数据
         List<QueueData> queueDataList = this.topicQueueTable.get(topicConfig.getTopicName());
+        // 初始化队列数据
         if (null == queueDataList) {
             queueDataList = new LinkedList<QueueData>();
             queueDataList.add(queueData);
@@ -235,7 +246,7 @@ public class RouteInfoManager {
             log.info("new topic registered, {} {}", topicConfig.getTopicName(), queueData);
         } else {
             boolean addNewOne = true;
-
+            // 遍历链表来确认Broker是否已经存在同样的队列数据，更新时首先移除旧的队列数据，将新的队列数据加入链表
             Iterator<QueueData> it = queueDataList.iterator();
             while (it.hasNext()) {
                 QueueData qd = it.next();
@@ -244,7 +255,7 @@ public class RouteInfoManager {
                         addNewOne = false;
                     } else {
                         log.info("topic changed, {} OLD: {} NEW: {}", topicConfig.getTopicName(), qd,
-                            queueData);
+                                queueData);
                         it.remove();
                     }
                 }
