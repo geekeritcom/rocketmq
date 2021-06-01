@@ -327,29 +327,39 @@ public class DefaultRequestProcessor extends AsyncNettyRequestProcessor implemen
             (UnRegisterBrokerRequestHeader) request.decodeCommandCustomHeader(UnRegisterBrokerRequestHeader.class);
 
         this.namesrvController.getRouteInfoManager().unregisterBroker(
-            requestHeader.getClusterName(),
-            requestHeader.getBrokerAddr(),
-            requestHeader.getBrokerName(),
-            requestHeader.getBrokerId());
+                requestHeader.getClusterName(),
+                requestHeader.getBrokerAddr(),
+                requestHeader.getBrokerName(),
+                requestHeader.getBrokerId());
 
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
         return response;
     }
 
+    /**
+     * NameServer获取指定Topic的路由信息
+     *
+     * @param ctx
+     * @param request
+     * @return
+     * @throws RemotingCommandException
+     */
     public RemotingCommand getRouteInfoByTopic(ChannelHandlerContext ctx,
-        RemotingCommand request) throws RemotingCommandException {
+                                               RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(null);
         final GetRouteInfoRequestHeader requestHeader =
-            (GetRouteInfoRequestHeader) request.decodeCommandCustomHeader(GetRouteInfoRequestHeader.class);
-
-        TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager().pickupTopicRouteData(requestHeader.getTopic());
+                (GetRouteInfoRequestHeader) request.decodeCommandCustomHeader(GetRouteInfoRequestHeader.class);
+        // 主要就是通过从RouteInfoManager中获取路由信息
+        TopicRouteData topicRouteData = this.namesrvController.getRouteInfoManager()
+                                                              .pickupTopicRouteData(requestHeader.getTopic());
 
         if (topicRouteData != null) {
+            // 当NameServer配置中指定需要使用有序队列时，这里会将有序配置设置到topic的路由信息中返回
             if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
                 String orderTopicConf =
-                    this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG,
-                        requestHeader.getTopic());
+                        this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG,
+                                requestHeader.getTopic());
                 topicRouteData.setOrderTopicConf(orderTopicConf);
             }
 
@@ -362,7 +372,7 @@ public class DefaultRequestProcessor extends AsyncNettyRequestProcessor implemen
 
         response.setCode(ResponseCode.TOPIC_NOT_EXIST);
         response.setRemark("No topic route info in name server for the topic: " + requestHeader.getTopic()
-            + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
+                + FAQUrl.suggestTodo(FAQUrl.APPLY_TOPIC_URL));
         return response;
     }
 
