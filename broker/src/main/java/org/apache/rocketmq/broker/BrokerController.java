@@ -896,7 +896,7 @@ public class BrokerController {
             handleSlaveSynchronize(messageStoreConfig.getBrokerRole());
             this.registerBrokerAll(true, false, true);
         }
-        // 提交注册任务，向NameServer进行注册
+        // 提交注册任务，向NameServer进行注册，默认30秒发起一次注册，注册周期支持自定义，但是需要在10S~60S之间
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override

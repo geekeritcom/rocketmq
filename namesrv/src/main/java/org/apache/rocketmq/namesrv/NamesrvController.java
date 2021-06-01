@@ -84,6 +84,7 @@ public class NamesrvController {
         // 注册请求处理器，NameServer用于处理网络请求的组件
         this.registerProcessor();
 
+        // 定时扫描不活跃的Broker，这里10秒执行一次
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override

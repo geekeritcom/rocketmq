@@ -162,7 +162,7 @@ public class RouteInfoManager {
                         }
                     }
                 }
-                // 构造当前Broker的存活信息（Broker数据版本，通信Channel等）
+                // 接收到Broker心跳时，更新当前Broker的存活信息（Broker最后心跳时间，数据版本，通信Channel等）
                 BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddr,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
@@ -447,6 +447,7 @@ public class RouteInfoManager {
         while (it.hasNext()) {
             Entry<String, BrokerLiveInfo> next = it.next();
             long last = next.getValue().getLastUpdateTimestamp();
+            // 当某个Broker已经120秒未发送心跳时，移除
             if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) {
                 RemotingUtil.closeChannel(next.getValue().getChannel());
                 it.remove();
@@ -484,7 +485,7 @@ public class RouteInfoManager {
         } else {
             log.info("the broker's channel destroyed, {}, clean it's data structure at once", brokerAddrFound);
         }
-
+        // 移除broker数据
         if (brokerAddrFound != null && brokerAddrFound.length() > 0) {
 
             try {
@@ -772,13 +773,16 @@ public class RouteInfoManager {
  * 用于维护保持存活的Broker的相关信息
  */
 class BrokerLiveInfo {
+    /**
+     * 最近心跳的时间戳
+     */
     private long lastUpdateTimestamp;
     private DataVersion dataVersion;
     private Channel channel;
     private String haServerAddr;
 
     public BrokerLiveInfo(long lastUpdateTimestamp, DataVersion dataVersion, Channel channel,
-        String haServerAddr) {
+                          String haServerAddr) {
         this.lastUpdateTimestamp = lastUpdateTimestamp;
         this.dataVersion = dataVersion;
         this.channel = channel;
