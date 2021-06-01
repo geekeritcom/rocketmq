@@ -1301,7 +1301,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private void addScheduleTask() {
-
+        // 定时执行清理文件
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -1629,6 +1629,7 @@ public class DefaultMessageStore implements MessageStore {
             boolean spacefull = this.isSpaceToDelete();
             boolean manualDelete = this.manualDeleteFileSeveralTimes > 0;
 
+            // 凌晨4点或者磁盘报警或者手动删除时执行清理
             if (timeup || spacefull || manualDelete) {
 
                 if (manualDelete)
@@ -1686,6 +1687,7 @@ public class DefaultMessageStore implements MessageStore {
             cleanImmediately = false;
 
             {
+                // 计算磁盘物理使用率，大于85后将立即清理
                 double physicRatio = UtilAll.getDiskPartitionSpaceUsedPercent(getStorePathPhysic());
                 if (physicRatio > diskSpaceWarningLevelRatio) {
                     boolean diskok = DefaultMessageStore.this.runningFlags.getAndMakeDiskFull();
