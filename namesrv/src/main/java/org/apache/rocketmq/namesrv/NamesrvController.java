@@ -74,17 +74,18 @@ public class NamesrvController {
     }
 
     public boolean initialize() {
-
+        // 从指定路径下加载KV配置
         this.kvConfigManager.load();
         // 初始化Netty服务器
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
+
+        // 创建处理网络请求的线程池并注册请求处理器，NameServer用于处理网络请求的组件
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
-        // 注册请求处理器，NameServer用于处理网络请求的组件
         this.registerProcessor();
 
-        // 定时扫描不活跃的Broker，这里10秒执行一次
+        // 创建定时任务，定时扫描不活跃的Broker，这里10秒执行一次
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -93,6 +94,7 @@ public class NamesrvController {
             }
         }, 5, 10, TimeUnit.SECONDS);
 
+        // 定时打印所有的命名空间下的配置键值对
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
