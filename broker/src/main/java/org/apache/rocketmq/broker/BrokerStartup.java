@@ -107,20 +107,26 @@ public class BrokerStartup {
                 System.exit(-1);
             }
 
+            // 实例化重要配置组件
             final BrokerConfig brokerConfig = new BrokerConfig();
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
 
+            // 设置加密机制
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
                 String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
             nettyServerConfig.setListenPort(10911);
+            // Broker消息存储配置
             final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 
+            // Master节点发现Consumer未消费消息与CommitLog中最新差值超出机器内存的指定比例后，
+            // 建议Consumer从Slave节点读取数据，避免Master节点上频繁的磁盘IO操作
             if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
                 int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
                 messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
             }
 
+            // 加载配置文件内容到核心配置组件中
             if (commandLine.hasOption('c')) {
                 String file = commandLine.getOptionValue('c');
                 if (file != null) {
@@ -147,6 +153,7 @@ public class BrokerStartup {
                 System.exit(-2);
             }
 
+            // 校验NameServer的地址是否合法
             String namesrvAddr = brokerConfig.getNamesrvAddr();
             if (null != namesrvAddr) {
                 try {
@@ -162,6 +169,7 @@ public class BrokerStartup {
                 }
             }
 
+            // 根据用户指定的broker的角色来设置或校验BrokerId
             switch (messageStoreConfig.getBrokerRole()) {
                 case ASYNC_MASTER:
                 case SYNC_MASTER:
@@ -178,6 +186,7 @@ public class BrokerStartup {
                     break;
             }
 
+            // 当基于Dledger技术时，设置BrokerId为-1
             if (messageStoreConfig.isEnableDLegerCommitLog()) {
                 brokerConfig.setBrokerId(-1);
             }
@@ -189,6 +198,7 @@ public class BrokerStartup {
             lc.reset();
             configurator.doConfigure(brokerConfig.getRocketmqHome() + "/conf/logback_broker.xml");
 
+            // 打印相关配置信息后退出
             if (commandLine.hasOption('p')) {
                 InternalLogger console = InternalLoggerFactory.getLogger(LoggerName.BROKER_CONSOLE_NAME);
                 MixAll.printObjectProperties(console, brokerConfig);
