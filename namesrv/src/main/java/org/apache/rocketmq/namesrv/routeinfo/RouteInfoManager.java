@@ -129,7 +129,7 @@ public class RouteInfoManager {
                 brokerNames.add(brokerName);
 
                 boolean registerFirst = false;
-                // 根据BrokerName来获取对应Broker的机器数据，不存在时进行初始化
+                // 根据BrokerName来获取注册Broker的数据，不存在时进行初始化
                 BrokerData brokerData = this.brokerAddrTable.get(brokerName);
                 if (null == brokerData) {
                     registerFirst = true;
@@ -142,7 +142,7 @@ public class RouteInfoManager {
                 Iterator<Entry<Long, String>> it = brokerAddrsMap.entrySet().iterator();
                 while (it.hasNext()) {
                     Entry<Long, String> item = it.next();
-                    // 当Broker的ID发生了变化，但是地址还是不变时说明发生了节点身份的变化，首先移除旧的记录
+                    // 当Broker的ID发生了变化，但是地址还是不变时说明Broker已经注册过，但是发生了节点身份的变化，首先移除旧的记录
                     if (null != brokerAddr && brokerAddr.equals(item.getValue()) && brokerId != item.getKey()) {
                         it.remove();
                     }
@@ -155,7 +155,7 @@ public class RouteInfoManager {
                 if (null != topicConfigWrapper
                     && MixAll.MASTER_ID == brokerId) {
                     // 需要创建更新Broker队列数据的条件：
-                    // 1.基于数据版本对比配置发生了变化
+                    // 1.基于Broker数据版本对比配置发生了变化
                     // 2.首次注册
                     if (this.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.getDataVersion())
                             || registerFirst) {
