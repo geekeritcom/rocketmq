@@ -87,6 +87,7 @@ public class DefaultRequestProcessor extends AsyncNettyRequestProcessor implemen
             case RequestCode.DELETE_KV_CONFIG:
                 return this.deleteKVConfig(ctx, request);
             case RequestCode.QUERY_DATA_VERSION:
+                // 查询broker数据版本
                 return queryBrokerTopicConfig(ctx, request);
             case RequestCode.REGISTER_BROKER:
                 // 处理注册请求
@@ -101,6 +102,7 @@ public class DefaultRequestProcessor extends AsyncNettyRequestProcessor implemen
             case RequestCode.GET_ROUTEINFO_BY_TOPIC:
                 return this.getRouteInfoByTopic(ctx, request);
             case RequestCode.GET_BROKER_CLUSTER_INFO:
+                // 查询broker的集群信息
                 return this.getBrokerClusterInfo(ctx, request);
             case RequestCode.WIPE_WRITE_PERM_OF_BROKER:
                 return this.wipeWritePermOfBroker(ctx, request);
@@ -252,24 +254,32 @@ public class DefaultRequestProcessor extends AsyncNettyRequestProcessor implemen
         return true;
     }
 
+
     public RemotingCommand queryBrokerTopicConfig(ChannelHandlerContext ctx,
         RemotingCommand request) throws RemotingCommandException {
         final RemotingCommand response = RemotingCommand.createResponseCommand(QueryDataVersionResponseHeader.class);
         final QueryDataVersionResponseHeader responseHeader = (QueryDataVersionResponseHeader) response.readCustomHeader();
+
+        // 解码请求头以及请求体的信息
         final QueryDataVersionRequestHeader requestHeader =
-            (QueryDataVersionRequestHeader) request.decodeCommandCustomHeader(QueryDataVersionRequestHeader.class);
+                (QueryDataVersionRequestHeader) request.decodeCommandCustomHeader(QueryDataVersionRequestHeader.class);
         DataVersion dataVersion = DataVersion.decode(request.getBody(), DataVersion.class);
 
-        Boolean changed = this.namesrvController.getRouteInfoManager().isBrokerTopicConfigChanged(requestHeader.getBrokerAddr(), dataVersion);
+        // 确认broker的配置是否发生了变化
+        Boolean changed = this.namesrvController.getRouteInfoManager()
+                                                .isBrokerTopicConfigChanged(requestHeader.getBrokerAddr(), dataVersion);
         if (!changed) {
+            // 配置未发生变化时更新broker的心跳时间
             this.namesrvController.getRouteInfoManager().updateBrokerInfoUpdateTimestamp(requestHeader.getBrokerAddr());
         }
 
-        DataVersion nameSeverDataVersion = this.namesrvController.getRouteInfoManager().queryBrokerTopicConfig(requestHeader.getBrokerAddr());
+        DataVersion nameSeverDataVersion = this.namesrvController.getRouteInfoManager()
+                                                                 .queryBrokerTopicConfig(requestHeader.getBrokerAddr());
         response.setCode(ResponseCode.SUCCESS);
         response.setRemark(null);
 
         if (nameSeverDataVersion != null) {
+            // 将broker对应的数据版本作为响应体返回
             response.setBody(nameSeverDataVersion.encode());
         }
         responseHeader.setChanged(changed);

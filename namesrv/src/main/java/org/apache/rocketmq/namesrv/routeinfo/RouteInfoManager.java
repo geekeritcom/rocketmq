@@ -52,10 +52,15 @@ public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    // 存储topic属性信息
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
+    // 存储broker属性信息
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
+    // 存储cluster信息
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+    // 存储broker的心跳信息
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+    // 存储broker的过滤器属性信息
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     /**
@@ -208,6 +213,13 @@ public class RouteInfoManager {
         return result;
     }
 
+    /**
+     * 确认指定broker的配置信息是否发生了变化，基于心跳中存储的数据版本对比
+     *
+     * @param brokerAddr  broker地址
+     * @param dataVersion 请求的数据版本
+     * @return 数据版本不一致时返回false
+     */
     public boolean isBrokerTopicConfigChanged(final String brokerAddr, final DataVersion dataVersion) {
         DataVersion prev = queryBrokerTopicConfig(brokerAddr);
         return null == prev || !prev.equals(dataVersion);
@@ -317,7 +329,9 @@ public class RouteInfoManager {
         final long brokerId) {
         try {
             try {
+                // 持有独占锁来保证broker下线的线程安全性
                 this.lock.writeLock().lockInterruptibly();
+                // 移除broker心跳
                 BrokerLiveInfo brokerLiveInfo = this.brokerLiveTable.remove(brokerAddr);
                 log.info("unregisterBroker, remove from brokerLiveTable {}, {}",
                     brokerLiveInfo != null ? "OK" : "Failed",
@@ -327,6 +341,7 @@ public class RouteInfoManager {
                 this.filterServerTable.remove(brokerAddr);
 
                 boolean removeBrokerName = false;
+                // 移除broker对应的地址信息
                 BrokerData brokerData = this.brokerAddrTable.get(brokerName);
                 if (null != brokerData) {
                     String addr = brokerData.getBrokerAddrs().remove(brokerId);
@@ -345,6 +360,7 @@ public class RouteInfoManager {
                     }
                 }
 
+                // 当相同名称的broker列表中不存在机器时，从集群信息中将该broker的信息移除
                 if (removeBrokerName) {
                     Set<String> nameSet = this.clusterAddrTable.get(clusterName);
                     if (nameSet != null) {
@@ -360,6 +376,7 @@ public class RouteInfoManager {
                             );
                         }
                     }
+                    // 根据broker名称移除路由表中的topic信息
                     this.removeTopicByBrokerName(brokerName);
                 }
             } finally {

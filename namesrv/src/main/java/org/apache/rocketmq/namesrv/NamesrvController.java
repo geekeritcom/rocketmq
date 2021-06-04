@@ -85,7 +85,7 @@ public class NamesrvController {
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
         this.registerProcessor();
 
-        // 创建定时任务，定时扫描不活跃的Broker，这里10秒执行一次
+        // 创建定时任务，定时扫描不活跃的Broker并移除过期Broker，这里10秒执行一次
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
             @Override
@@ -103,6 +103,7 @@ public class NamesrvController {
             }
         }, 1, 10, TimeUnit.MINUTES);
 
+        // 处理安全机制相关配置
         if (TlsSystemConfig.tlsMode != TlsMode.DISABLED) {
             // Register a listener to reload SslContext
             try {
@@ -150,7 +151,7 @@ public class NamesrvController {
             this.remotingServer.registerDefaultProcessor(new ClusterTestRequestProcessor(this, namesrvConfig.getProductEnvName()),
                 this.remotingExecutor);
         } else {
-            // 使用默认的请求处理器来处理网络请求
+            // 向Netty服务器注册，使用默认的请求处理器来处理网络请求
             this.remotingServer.registerDefaultProcessor(new DefaultRequestProcessor(this), this.remotingExecutor);
         }
     }

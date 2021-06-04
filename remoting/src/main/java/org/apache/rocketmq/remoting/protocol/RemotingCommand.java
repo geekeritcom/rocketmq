@@ -106,12 +106,18 @@ public class RemotingCommand {
         }
     }
 
+    /**
+     * 利用反射创建对应请求的请求头实例
+     *
+     * @param classHeader   请求头
+     * @return  封装了请求头实例的响应
+     */
     public static RemotingCommand createResponseCommand(Class<? extends CommandCustomHeader> classHeader) {
         return createResponseCommand(RemotingSysResponseCode.SYSTEM_ERROR, "not set any response code", classHeader);
     }
 
     public static RemotingCommand createResponseCommand(int code, String remark,
-        Class<? extends CommandCustomHeader> classHeader) {
+                                                        Class<? extends CommandCustomHeader> classHeader) {
         RemotingCommand cmd = new RemotingCommand();
         cmd.markResponseType();
         cmd.setCode(code);
