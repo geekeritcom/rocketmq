@@ -42,6 +42,7 @@ public class PullRequestHoldService extends ServiceThread {
     }
 
     public void suspendPullRequest(final String topic, final int queueId, final PullRequest pullRequest) {
+        // 基于topic@queueid存储PullRequest实例，将多个同一topic下同一队列中的请求放入同一容器中管理
         String key = this.buildKey(topic, queueId);
         ManyPullRequest mpr = this.pullRequestTable.get(key);
         if (null == mpr) {
@@ -124,6 +125,8 @@ public class PullRequestHoldService extends ServiceThread {
 
                 for (PullRequest request : requestList) {
                     long newestOffset = maxOffset;
+                    // 之前计算的Broker中的最大的offset比当前PullRequest要拉取的offset都小，
+                    // 说明之前的offset太落后了，需要重新拉取目标queue最新的offset
                     if (newestOffset <= request.getPullFromThisOffset()) {
                         newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
                     }

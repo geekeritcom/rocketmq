@@ -46,9 +46,13 @@ public class SlaveSynchronize {
     }
 
     public void syncAll() {
+        // 同步topic配置信息
         this.syncTopicConfig();
+        // 同步consumer的消费offset信息
         this.syncConsumerOffset();
+        // 同步consumer的delay消息offset
         this.syncDelayOffset();
+        // 同步consumer订阅配置信息
         this.syncSubscriptionGroupConfig();
     }
 

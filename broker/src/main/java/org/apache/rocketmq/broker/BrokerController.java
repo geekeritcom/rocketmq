@@ -232,10 +232,13 @@ public class BrokerController {
     }
 
     public boolean initialize() throws CloneNotSupportedException {
-        // 加载Broker存储目录下已有的相关配置
+        // 加载磁盘数据
+        // topic配置
         boolean result = this.topicConfigManager.load();
 
+        // consumer的消费offset进度
         result = result && this.consumerOffsetManager.load();
+        // consumer的订阅组以及过滤器
         result = result && this.subscriptionGroupManager.load();
         result = result && this.consumerFilterManager.load();
 
@@ -322,7 +325,7 @@ public class BrokerController {
                 TimeUnit.MILLISECONDS,
                 this.heartbeatThreadPoolQueue,
                 new ThreadFactoryImpl("HeartbeatThread_", true));
-            // 创建事务相关线程池
+            // 结束事务相关线程池
             this.endTransactionExecutor = new BrokerFixedThreadPoolExecutor(
                 this.brokerConfig.getEndTransactionThreadPoolNums(),
                 this.brokerConfig.getEndTransactionThreadPoolNums(),
@@ -335,6 +338,7 @@ public class BrokerController {
                 Executors.newFixedThreadPool(this.brokerConfig.getConsumerManageThreadPoolNums(), new ThreadFactoryImpl(
                     "ConsumerManageThread_"));
 
+            // 注册Netty服务器的请求处理器
             this.registerProcessor();
 
             final long initialDelay = UtilAll.computeNextMorningTimeMillis() - System.currentTimeMillis();
@@ -939,7 +943,7 @@ public class BrokerController {
     }
 
     public synchronized void registerBrokerAll(final boolean checkOrderConfig, boolean oneway, boolean forceRegister) {
-        // 处理TOPIC配置
+        // 处理topic配置
         TopicConfigSerializeWrapper topicConfigWrapper = this.getTopicConfigManager().buildTopicConfigSerializeWrapper();
 
         if (!PermName.isWriteable(this.getBrokerConfig().getBrokerPermission())
@@ -985,6 +989,7 @@ public class BrokerController {
                     this.messageStore.updateHaMasterAddress(registerBrokerResult.getHaServerAddr());
                 }
 
+                // broker注册完成后就能够得知集群中的Master信息
                 this.slaveSynchronize.setMasterAddr(registerBrokerResult.getMasterAddr());
 
                 if (checkOrderConfig) {
@@ -1153,6 +1158,7 @@ public class BrokerController {
                 @Override
                 public void run() {
                     try {
+                        // 定时从集群中的leader同步信息
                         BrokerController.this.slaveSynchronize.syncAll();
                     }
                     catch (Throwable e) {

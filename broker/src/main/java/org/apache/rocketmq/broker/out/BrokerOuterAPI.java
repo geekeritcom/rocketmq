@@ -152,6 +152,7 @@ public class BrokerOuterAPI {
                             // 执行Broker注册逻辑
                             RegisterBrokerResult result = registerBroker(namesrvAddr,oneway, timeoutMills,requestHeader,body);
                             if (result != null) {
+                                // 存储注册结果
                                 registerBrokerResultList.add(result);
                             }
 

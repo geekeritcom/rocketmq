@@ -1052,6 +1052,7 @@ public class MQClientInstance {
         boolean slave = false;
         boolean found = false;
 
+        // 从本地缓存的broker信息中查询目标broker的信息
         HashMap<Long/* brokerId */, String/* address */> map = this.brokerAddrTable.get(brokerName);
         if (map != null && !map.isEmpty()) {
             brokerAddr = map.get(brokerId);

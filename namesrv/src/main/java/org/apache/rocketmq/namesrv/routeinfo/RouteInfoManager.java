@@ -173,7 +173,7 @@ public class RouteInfoManager {
                         }
                     }
                 }
-                // 接收到Broker心跳时，更新当前Broker的存活信息（Broker最后心跳时间，数据版本，通信Channel等）
+                // 接收到Broker心跳时，更新当前Broker的心跳信息（Broker最后心跳时间，数据版本，通信Channel等）
                 BrokerLiveInfo prevBrokerLiveInfo = this.brokerLiveTable.put(brokerAddr,
                     new BrokerLiveInfo(
                         System.currentTimeMillis(),
@@ -471,6 +471,7 @@ public class RouteInfoManager {
     }
 
     public void scanNotActiveBroker() {
+        // 遍历broker心跳信息记录
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, BrokerLiveInfo> next = it.next();

@@ -221,6 +221,7 @@ public class BrokerStartup {
             MixAll.printObjectProperties(log, nettyClientConfig);
             MixAll.printObjectProperties(log, messageStoreConfig);
 
+            // 基于加载的配置实例创建核心组件BrokerController实例
             final BrokerController controller = new BrokerController(
                 brokerConfig,
                 nettyServerConfig,

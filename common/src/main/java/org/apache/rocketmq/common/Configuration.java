@@ -29,7 +29,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * 维护NameServer中的所有配置项
+ * 维护NameServer或者Broker中的所有配置项
  */
 public class Configuration {
 
