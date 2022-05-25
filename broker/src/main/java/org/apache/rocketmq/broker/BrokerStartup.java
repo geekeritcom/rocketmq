@@ -122,6 +122,7 @@ public class BrokerStartup {
             // Master节点发现Consumer未消费消息与CommitLog中最新差值超出机器内存的指定比例后，
             // 建议Consumer从Slave节点读取数据，避免Master节点上频繁的磁盘IO操作
             if (BrokerRole.SLAVE == messageStoreConfig.getBrokerRole()) {
+                // 默认比例为30%
                 int ratio = messageStoreConfig.getAccessMessageInMemoryMaxRatio() - 10;
                 messageStoreConfig.setAccessMessageInMemoryMaxRatio(ratio);
             }

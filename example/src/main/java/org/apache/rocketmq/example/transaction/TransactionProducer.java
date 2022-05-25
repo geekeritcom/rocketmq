@@ -50,8 +50,9 @@ public class TransactionProducer {
         String[] tags = new String[] {"TagA", "TagB", "TagC", "TagD", "TagE"};
         for (int i = 0; i < 10; i++) {
             try {
-                Message msg =
-                    new Message("TopicTest1234", tags[i % tags.length], "KEY" + i,
+                Message msg = new Message("TopicTest1234",
+                        tags[i % tags.length],
+                        "KEY" + i,
                         ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
                 SendResult sendResult = producer.sendMessageInTransaction(msg, null);
                 System.out.printf("%s%n", sendResult);

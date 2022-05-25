@@ -147,7 +147,7 @@ public class RouteInfoManager {
                 Iterator<Entry<Long, String>> it = brokerAddrsMap.entrySet().iterator();
                 while (it.hasNext()) {
                     Entry<Long, String> item = it.next();
-                    // 当Broker的ID发生了变化，但是地址还是不变时说明Broker已经注册过，但是发生了节点身份的变化，首先移除旧的记录
+                    // 当Broker的ID发生了变化，地址不变时说明Broker已经注册过，但是发生了节点身份的变化，首先移除旧的记录
                     if (null != brokerAddr && brokerAddr.equals(item.getValue()) && brokerId != item.getKey()) {
                         it.remove();
                     }
@@ -156,7 +156,8 @@ public class RouteInfoManager {
                 String oldAddr = brokerData.getBrokerAddrs().put(brokerId, brokerAddr);
                 registerFirst = registerFirst || (null == oldAddr);
 
-                // 当此处注册的Broker属于集群中的master节点并且注册时携带了集群中Topic的配置信息时，需要对维护的Topic配置进行更新
+                // 当此处注册的Broker属于集群中的master节点并且注册时携带了集群中Topic的配置信息时，
+                // 需要对维护的Topic配置进行更新
                 if (null != topicConfigWrapper
                     && MixAll.MASTER_ID == brokerId) {
                     // 需要创建更新Broker队列数据的条件：

@@ -1571,6 +1571,7 @@ public class DefaultMessageStore implements MessageStore {
             switch (tranType) {
                 case MessageSysFlag.TRANSACTION_NOT_TYPE:
                 case MessageSysFlag.TRANSACTION_COMMIT_TYPE:
+                    // 将消息写入对应的consumeQueue中
                     DefaultMessageStore.this.putMessagePositionInfo(request);
                     break;
                 case MessageSysFlag.TRANSACTION_PREPARED_TYPE:
@@ -1585,6 +1586,7 @@ public class DefaultMessageStore implements MessageStore {
         @Override
         public void dispatch(DispatchRequest request) {
             if (DefaultMessageStore.this.messageStoreConfig.isMessageIndexEnable()) {
+                // 为指定消息建立索引
                 DefaultMessageStore.this.indexService.buildIndex(request);
             }
         }
@@ -1946,8 +1948,10 @@ public class DefaultMessageStore implements MessageStore {
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
+                                    // 分发commitLog构建consumeQueue以及index
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
+                                    // 当前Broker不是slave节点并且配置允许长连接获取消息时，获取到新的消息需要通知监听器
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
                                         && DefaultMessageStore.this.brokerConfig.isLongPollingEnable()) {
                                         DefaultMessageStore.this.messageArrivingListener.arriving(dispatchRequest.getTopic(),

@@ -48,11 +48,11 @@ public class Consumer {
          * }
          * </pre>
          */
-        consumer.setNamesrvAddr("192.168.2.126:9876");
+        consumer.setNamesrvAddr("192.168.2.24:9876");
         /*
          * Specify where to start in case the specified consumer group is a brand new one.
          */
-        consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
+//        consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
 
         /*
          * Subscribe one more more topics to consume.
@@ -68,6 +68,9 @@ public class Consumer {
             public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs,
                 ConsumeConcurrentlyContext context) {
                 System.out.printf("%s Receive New Messages: %s %n", Thread.currentThread().getName(), msgs);
+                for (MessageExt msg : msgs) {
+                    System.out.println("receive message time " + (System.currentTimeMillis() - msg.getBornTimestamp()));
+                }
                 return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
             }
         });

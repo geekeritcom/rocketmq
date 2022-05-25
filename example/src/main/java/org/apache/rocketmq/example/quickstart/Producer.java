@@ -18,6 +18,7 @@ package org.apache.rocketmq.example.quickstart;
 
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
@@ -31,7 +32,7 @@ public class Producer {
         /*
          * Instantiate with a producer group name.
          */
-        DefaultMQProducer producer = new DefaultMQProducer("please_rename_unique_group_name");
+        DefaultMQProducer producer = new DefaultMQProducer("MyProducerGroup");
 
         /*
          * Specify name server addresses.
@@ -44,7 +45,7 @@ public class Producer {
          * }
          * </pre>
          */
-        producer.setNamesrvAddr("192.168.2.126:9876");
+        producer.setNamesrvAddr("192.168.9.40:9876");
         /*
          * Launch the instance.
          */
@@ -56,15 +57,18 @@ public class Producer {
                 /*
                  * Create a message instance, specifying topic, tag and message body.
                  */
-                Message msg = new Message("TopicTest" /* Topic */,
+                Message msg = new Message("t1" /* Topic */,
                     "TagA" /* Tag */,
                     ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
                 );
+//                msg.setDelayTimeLevel(3);
 
                 /*
                  * Call send message to deliver message to one of brokers.
                  */
+                producer.setSendLatencyFaultEnable(true);
                 SendResult sendResult = producer.send(msg);
+
 
                 System.out.printf("%s%n", sendResult);
             } catch (Exception e) {

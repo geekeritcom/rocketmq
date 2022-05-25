@@ -127,6 +127,7 @@ public class PullRequestHoldService extends ServiceThread {
                     long newestOffset = maxOffset;
                     // 之前计算的Broker中的最大的offset比当前PullRequest要拉取的offset都小，
                     // 说明之前的offset太落后了，需要重新拉取目标queue最新的offset
+                    // 大白话就是Consumer要拉取的消息比内部发现的新消息的Offset要大
                     if (newestOffset <= request.getPullFromThisOffset()) {
                         newestOffset = this.brokerController.getMessageStore().getMaxOffsetInQueue(topic, queueId);
                     }
