@@ -140,6 +140,7 @@ public class MixAll {
         String tmpFile = fileName + ".tmp";
         string2FileNotSafe(str, tmpFile);
 
+        // 对旧的内容进行备份
         String bakFile = fileName + ".bak";
         String prevContent = file2String(fileName);
         if (prevContent != null) {

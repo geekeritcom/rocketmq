@@ -21,8 +21,11 @@
 package org.apache.rocketmq.common.protocol.route;
 
 public class QueueData implements Comparable<QueueData> {
+    // 所属broker组
     private String brokerName;
+    // 读取数据queue数量
     private int readQueueNums;
+    // 写入数据queue数量，区分读写队列的目的是为了对topic的queue进行动态扩容缩容
     private int writeQueueNums;
     private int perm;
     private int topicSynFlag;

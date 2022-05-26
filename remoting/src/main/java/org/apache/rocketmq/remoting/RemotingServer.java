@@ -47,12 +47,38 @@ public interface RemotingServer extends RemotingService {
 
     int localListenPort();
 
+    /**
+     * 查询请求的请求处理器与线程池
+     * @param requestCode
+     * @return
+     */
     Pair<NettyRequestProcessor, ExecutorService> getProcessorPair(final int requestCode);
 
+    /**
+     * 同步RPC调用
+     * @param channel   broker与client之间的长连接
+     * @param request   请求信息
+     * @param timeoutMillis 请求超时时间
+     * @return
+     * @throws InterruptedException
+     * @throws RemotingSendRequestException
+     * @throws RemotingTimeoutException
+     */
     RemotingCommand invokeSync(final Channel channel, final RemotingCommand request,
                                final long timeoutMillis) throws InterruptedException, RemotingSendRequestException,
             RemotingTimeoutException;
 
+    /**
+     * 异步RPC调用
+     * @param channel
+     * @param request
+     * @param timeoutMillis
+     * @param invokeCallback    请求的响应回调
+     * @throws InterruptedException
+     * @throws RemotingTooMuchRequestException
+     * @throws RemotingTimeoutException
+     * @throws RemotingSendRequestException
+     */
     void invokeAsync(final Channel channel, final RemotingCommand request, final long timeoutMillis,
         final InvokeCallback invokeCallback) throws InterruptedException,
         RemotingTooMuchRequestException, RemotingTimeoutException, RemotingSendRequestException;

@@ -36,8 +36,11 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 public class FileWatchService extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
+    // 要观察的文件
     private final List<String> watchFiles;
+    // 文件的哈希值
     private final List<String> fileCurrentHash;
+    // 文件发生变动后的监听器
     private final Listener listener;
     private static final int WATCH_INTERVAL = 500;
     private MessageDigest md = MessageDigest.getInstance("MD5");
@@ -77,8 +80,10 @@ public class FileWatchService extends ServiceThread {
                         log.warn(this.getServiceName() + " service has exception when calculate the file hash. ", ignored);
                         continue;
                     }
+                    // 对比文件内容是否发生变化
                     if (!newHash.equals(fileCurrentHash.get(i))) {
                         fileCurrentHash.set(i, newHash);
+                        // 通知监听器
                         listener.onChanged(watchFiles.get(i));
                     }
                 }

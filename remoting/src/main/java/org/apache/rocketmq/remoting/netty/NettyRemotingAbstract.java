@@ -61,6 +61,7 @@ public abstract class NettyRemotingAbstract {
 
     /**
      * Semaphore to limit maximum number of on-going one-way requests, which protects system memory footprint.
+     * 限制oneway模式的请求数量
      */
     protected final Semaphore semaphoreOneway;
 
@@ -71,6 +72,7 @@ public abstract class NettyRemotingAbstract {
 
     /**
      * This map caches all on-going requests.
+     * 通过组件发送的所有请求进行缓存
      */
     protected final ConcurrentMap<Integer /* opaque */, ResponseFuture> responseTable =
         new ConcurrentHashMap<Integer, ResponseFuture>(256);
@@ -565,10 +567,18 @@ public abstract class NettyRemotingAbstract {
         }
     }
 
+    /**
+     * 网络连接事件处理线程
+     * 仅对网络事件进行缓存，转交给对应的监听器处理
+     */
     class NettyEventExecutor extends ServiceThread {
         private final LinkedBlockingQueue<NettyEvent> eventQueue = new LinkedBlockingQueue<NettyEvent>();
         private final int maxSize = 10000;
 
+        /**
+         * 线程运行过程中有关事件会被放入queue中
+         * @param event
+         */
         public void putNettyEvent(final NettyEvent event) {
             if (this.eventQueue.size() <= maxSize) {
                 this.eventQueue.add(event);
