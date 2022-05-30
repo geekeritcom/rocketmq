@@ -70,23 +70,30 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     private final EventLoopGroup eventLoopGroupBoss;
     private final NettyServerConfig nettyServerConfig;
 
+    // 公共线程池
     private final ExecutorService publicExecutor;
     private final ChannelEventListener channelEventListener;
 
     private final Timer timer = new Timer("ServerHouseKeepingService", true);
+    // netty的事件处理线程池组件
     private DefaultEventExecutorGroup defaultEventExecutorGroup;
 
 
     private int port = 0;
+
 
     private static final String HANDSHAKE_HANDLER_NAME = "handshakeHandler";
     private static final String TLS_HANDLER_NAME = "sslHandler";
     private static final String FILE_REGION_ENCODER_NAME = "fileRegionEncoder";
 
     // sharable handlers
+    // 握手处理组件
     private HandshakeHandler handshakeHandler;
+    // 通信编码器
     private NettyEncoder encoder;
+    // 连接管理处理器
     private NettyConnectManageHandler connectionManageHandler;
+    // 消息处理组件
     private NettyServerHandler serverHandler;
 
     public NettyRemotingServer(final NettyServerConfig nettyServerConfig) {
@@ -115,6 +122,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             }
         });
 
+        // 基于系统信息与配置信息等综合判断是否使用epoll技术
         if (useEpoll()) {
             this.eventLoopGroupBoss = new EpollEventLoopGroup(1, new ThreadFactory() {
                 private AtomicInteger threadIndex = new AtomicInteger(0);
@@ -135,6 +143,8 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 }
             });
         } else {
+            // 默认使用NIO
+            // 仅利用1个线程作为boss group多路复用组件，监听ServerSocketChannel是否有客户端发起连接请求
             this.eventLoopGroupBoss = new NioEventLoopGroup(1, new ThreadFactory() {
                 private AtomicInteger threadIndex = new AtomicInteger(0);
 
@@ -144,6 +154,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 }
             });
 
+            // 设置IO线程数量
             this.eventLoopGroupSelector = new NioEventLoopGroup(nettyServerConfig.getServerSelectorThreads(), new ThreadFactory() {
                 private AtomicInteger threadIndex = new AtomicInteger(0);
                 private int threadTotal = nettyServerConfig.getServerSelectorThreads();
@@ -155,6 +166,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             });
         }
 
+        // 加载ssl上下文
         loadSslContext();
     }
 
@@ -182,6 +194,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
 
     @Override
     public void start() {
+        // 默认事件处理线程池
         this.defaultEventExecutorGroup = new DefaultEventExecutorGroup(
             nettyServerConfig.getServerWorkerThreads(),
             new ThreadFactory() {
@@ -194,17 +207,25 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
                 }
             });
 
+        // 准备事件处理器
         prepareSharableHandlers();
 
         // 设置一系列的网络请求处理器
         ServerBootstrap childHandler =
             this.serverBootstrap.group(this.eventLoopGroupBoss, this.eventLoopGroupSelector)
+                    // 默认使用NIO
                 .channel(useEpoll() ? EpollServerSocketChannel.class : NioServerSocketChannel.class)
+                    // TCP连接选项，三次握手的accept连接队列长度
                 .option(ChannelOption.SO_BACKLOG, 1024)
+                    // 底层端口unbind后，允许重启后重新监听该端口
                 .option(ChannelOption.SO_REUSEADDR, true)
+                    // 是否自动发送探测包
                 .option(ChannelOption.SO_KEEPALIVE, false)
+                    // 禁止TCP打包传输，避免通信延迟
                 .childOption(ChannelOption.TCP_NODELAY, true)
+                    // 设置发送缓冲区大小
                 .childOption(ChannelOption.SO_SNDBUF, nettyServerConfig.getServerSocketSndBufSize())
+                    // 设置接收缓冲区大小
                 .childOption(ChannelOption.SO_RCVBUF, nettyServerConfig.getServerSocketRcvBufSize())
                 .localAddress(new InetSocketAddress(this.nettyServerConfig.getListenPort()))
                 .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -244,7 +265,7 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             this.nettyEventExecutor.start();
         }
 
-        // 定期扫描超时请求
+        // 每隔1秒扫描超时请求
         this.timer.scheduleAtFixedRate(new TimerTask() {
 
             @Override
@@ -352,12 +373,17 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
     }
 
     private void prepareSharableHandlers() {
+        // 默认以TLS握手
         handshakeHandler = new HandshakeHandler(TlsSystemConfig.tlsMode);
+        // 编码器
         encoder = new NettyEncoder();
+        // 连接管理处理器
         connectionManageHandler = new NettyConnectManageHandler();
+
         serverHandler = new NettyServerHandler();
     }
 
+    // 握手处理组件
     @ChannelHandler.Sharable
     class HandshakeHandler extends SimpleChannelInboundHandler<ByteBuf> {
 

@@ -90,9 +90,10 @@ public class NamesrvController {
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);
 
 
-        // 创建处理网络请求的线程池并注册请求处理器，NameServer用于处理网络请求的组件
+        // 创建处理网络请求的线程池并注册请求处理器，NameServer用于处理网络请求的组件，为下一步注册处理组件做准备
         this.remotingExecutor =
             Executors.newFixedThreadPool(nettyServerConfig.getServerWorkerThreads(), new ThreadFactoryImpl("RemotingExecutorThread_"));
+        // 注册网络请求处理组件
         this.registerProcessor();
 
         // 创建定时任务，定时扫描不活跃的Broker并移除过期Broker，这里10秒执行一次
