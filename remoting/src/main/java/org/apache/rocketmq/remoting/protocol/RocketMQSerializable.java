@@ -35,6 +35,7 @@ public class RocketMQSerializable {
         }
 
         // HashMap<String, String> extFields
+        // 自定义的header
         byte[] extFieldsBytes = null;
         int extLen = 0;
         if (cmd.getExtFields() != null && !cmd.getExtFields().isEmpty()) {
@@ -42,6 +43,7 @@ public class RocketMQSerializable {
             extLen = extFieldsBytes.length;
         }
 
+        // 计算总字节长度
         int totalLen = calTotalLen(remarkLen, extLen);
 
         ByteBuffer headerBuffer = ByteBuffer.allocate(totalLen);
