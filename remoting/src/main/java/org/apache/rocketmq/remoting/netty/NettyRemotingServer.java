@@ -402,8 +402,10 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             // TLS handshake
             msg.markReaderIndex();
 
+            // 读取首个字节
             byte b = msg.getByte(0);
 
+            // 确认是否属于握手消息
             if (b == HANDSHAKE_MAGIC_CODE) {
                 switch (tlsMode) {
                     case DISABLED:
