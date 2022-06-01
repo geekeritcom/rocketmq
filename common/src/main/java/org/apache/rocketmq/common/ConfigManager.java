@@ -29,6 +29,7 @@ public abstract class ConfigManager {
     public boolean load() {
         String fileName = null;
         try {
+            // 通过具体实现获取不同配置文件的存储路径
             fileName = this.configFilePath();
             String jsonString = MixAll.file2String(fileName);
 

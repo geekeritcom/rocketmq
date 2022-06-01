@@ -109,14 +109,16 @@ public class BrokerStartup {
 
             // 实例化重要配置组件
             final BrokerConfig brokerConfig = new BrokerConfig();
+            // 对于broker来说会同时扮演nettyServer以及NettyClient两个角色
             final NettyServerConfig nettyServerConfig = new NettyServerConfig();
             final NettyClientConfig nettyClientConfig = new NettyClientConfig();
 
             // 设置加密机制
             nettyClientConfig.setUseTLS(Boolean.parseBoolean(System.getProperty(TLS_ENABLE,
                 String.valueOf(TlsSystemConfig.tlsMode == TlsMode.ENFORCING))));
+            // nettyServer默认监听端口
             nettyServerConfig.setListenPort(10911);
-            // Broker消息存储配置
+            // Broker消息存储配置（commitLog,consumeQueue,indexFile）
             final MessageStoreConfig messageStoreConfig = new MessageStoreConfig();
 
             // Master节点发现Consumer未消费消息与CommitLog中最新差值超出机器内存的指定比例后，
@@ -154,7 +156,7 @@ public class BrokerStartup {
                 System.exit(-2);
             }
 
-            // 校验NameServer的地址是否合法
+            // 解析并校验NameServer的地址是否合法
             String namesrvAddr = brokerConfig.getNamesrvAddr();
             if (null != namesrvAddr) {
                 try {
@@ -187,11 +189,12 @@ public class BrokerStartup {
                     break;
             }
 
-            // 当基于Dledger技术时，设置BrokerId为-1
+            // 当基于Dledger技术时，会自动选举主节点与从节点，因此这里强制设置BrokerId为-1
             if (messageStoreConfig.isEnableDLegerCommitLog()) {
                 brokerConfig.setBrokerId(-1);
             }
 
+            // 高可用服务端口
             messageStoreConfig.setHaListenPort(nettyServerConfig.getListenPort() + 1);
             LoggerContext lc = (LoggerContext) LoggerFactory.getILoggerFactory();
             JoranConfigurator configurator = new JoranConfigurator();
@@ -231,6 +234,7 @@ public class BrokerStartup {
             // remember all configs to prevent discard
             controller.getConfiguration().registerConfig(properties);
 
+            // 核心组件初始化
             boolean initResult = controller.initialize();
             if (!initResult) {
                 controller.shutdown();
