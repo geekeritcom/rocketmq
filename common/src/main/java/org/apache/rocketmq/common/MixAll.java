@@ -147,9 +147,11 @@ public class MixAll {
             string2FileNotSafe(prevContent, bakFile);
         }
 
+        // 删除旧文件
         File file = new File(fileName);
         file.delete();
 
+        // 创建tmp文件
         file = new File(tmpFile);
         file.renameTo(new File(fileName));
     }

@@ -224,6 +224,7 @@ public class BrokerController {
 
         // 消费进度管理组件
         this.consumerOffsetManager = new ConsumerOffsetManager(this);
+        // broker中的topic元数据管理组件
         this.topicConfigManager = new TopicConfigManager(this);
         this.pullMessageProcessor = new PullMessageProcessor(this);
         this.pullRequestHoldService = new PullRequestHoldService(this);
@@ -991,12 +992,16 @@ public class BrokerController {
         // 处理topic配置
         TopicConfigSerializeWrapper topicConfigWrapper = this.getTopicConfigManager().buildTopicConfigSerializeWrapper();
 
+        // 确认当前broker是否支持读或者写
         if (!PermName.isWriteable(this.getBrokerConfig().getBrokerPermission())
                 || !PermName.isReadable(this.getBrokerConfig().getBrokerPermission())) {
             ConcurrentHashMap<String, TopicConfig> topicConfigTable = new ConcurrentHashMap<String, TopicConfig>();
             for (TopicConfig topicConfig : topicConfigWrapper.getTopicConfigTable().values()) {
+                // 不支持的情况下需要对当前broker上的所有topic以broker的权限进行注册
                 TopicConfig tmp =
-                        new TopicConfig(topicConfig.getTopicName(), topicConfig.getReadQueueNums(), topicConfig.getWriteQueueNums(),
+                        new TopicConfig(topicConfig.getTopicName(),
+                                topicConfig.getReadQueueNums(),
+                                topicConfig.getWriteQueueNums(),
                                 this.brokerConfig.getBrokerPermission());
                 topicConfigTable.put(topicConfig.getTopicName(), tmp);
             }
