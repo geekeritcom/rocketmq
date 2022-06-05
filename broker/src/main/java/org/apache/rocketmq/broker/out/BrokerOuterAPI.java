@@ -148,6 +148,8 @@ public class BrokerOuterAPI {
             requestHeader.setBodyCrc32(bodyCrc32);
             // 使用CountDownLatch实例来等待所有异步注册的请求完成
             final CountDownLatch countDownLatch = new CountDownLatch(nameServerAddressList.size());
+            // 这里需要注意的是RocketMQ中的NameServer节点属于peer-2-peer，每个节点的身份是对等的，
+            // 因此需要向所有NameServer节点发起注册请求
             for (final String namesrvAddr : nameServerAddressList) {
                 brokerOuterExecutor.execute(new Runnable() {
                     @Override
