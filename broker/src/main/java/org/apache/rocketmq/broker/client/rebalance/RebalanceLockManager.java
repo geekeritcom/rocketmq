@@ -27,6 +27,12 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.common.message.MessageQueue;
 
+/**
+ * rebalance锁管理组件
+ * 什么时候会进行rebalance
+ * 1.当新的broker加入到当前broker组中
+ * 2.当新的consumer上线消费时将部分queue迁移给新的consumer（当前组件为这种情况服务）
+ */
 public class RebalanceLockManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.REBALANCE_LOCK_LOGGER_NAME);
     private final static long REBALANCE_LOCK_MAX_LIVE_TIME = Long.parseLong(System.getProperty(

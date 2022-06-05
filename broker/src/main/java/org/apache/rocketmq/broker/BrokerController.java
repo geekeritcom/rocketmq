@@ -132,6 +132,9 @@ public class BrokerController {
     private final PullRequestHoldService pullRequestHoldService;
     private final SubscriptionGroupManager subscriptionGroupManager;
     private final ConsumerIdsChangeListener consumerIdsChangeListener;
+    // 重平衡锁
+    private final RebalanceLockManager rebalanceLockManager = new RebalanceLockManager();
+
     // 消息监听器
     private final MessageArrivingListener messageArrivingListener;
 
@@ -154,8 +157,6 @@ public class BrokerController {
 
 
     // broker内部核心组件
-    // 重平衡锁
-    private final RebalanceLockManager rebalanceLockManager = new RebalanceLockManager();
     // 调度线程池
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
             "BrokerControllerScheduledThread"));

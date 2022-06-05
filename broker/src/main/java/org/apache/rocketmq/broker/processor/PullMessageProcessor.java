@@ -69,9 +69,13 @@ import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+/**
+ * 拉取消息处理组件
+ */
 public class PullMessageProcessor extends AsyncNettyRequestProcessor implements NettyRequestProcessor {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;
+    // 消息消费回调
     private List<ConsumeMessageHook> consumeMessageHookList;
 
     public PullMessageProcessor(final BrokerController brokerController) {
@@ -157,6 +161,8 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
 
         SubscriptionData subscriptionData = null;
         ConsumerFilterData consumerFilterData = null;
+
+        // 如果消费者存在订阅标识时，需要基于请求头构建过滤规则
         if (hasSubscriptionFlag) {
             try {
                 subscriptionData = FilterAPI.build(
