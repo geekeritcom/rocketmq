@@ -21,6 +21,9 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * 为rockermq中的重要组件提供持久化的能力
+ */
 public abstract class ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
@@ -29,6 +32,7 @@ public abstract class ConfigManager {
     public boolean load() {
         String fileName = null;
         try {
+            // 通过具体实现获取不同配置文件的存储路径
             fileName = this.configFilePath();
             String jsonString = MixAll.file2String(fileName);
 

@@ -35,6 +35,7 @@ public class BrokerPathConfigHelper {
         return rootDir + File.separator + "config" + File.separator + "topics.json";
     }
 
+    // 通过存储路径下获取消费偏移量配置文件，/storePath/config/consumerOffset.json
     public static String getConsumerOffsetPath(final String rootDir) {
         return rootDir + File.separator + "config" + File.separator + "consumerOffset.json";
     }

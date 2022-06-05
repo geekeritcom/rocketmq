@@ -23,7 +23,7 @@ public class NettyServerConfig implements Cloneable {
     private int serverWorkerThreads = 8;
     // 默认回调线程池数量
     private int serverCallbackExecutorThreads = 0;
-    // 连接监听的线程数量
+    // 连接io事件监听的线程数量
     private int serverSelectorThreads = 3;
     // oneway方式并发请求最大数量
     private int serverOnewaySemaphoreValue = 256;

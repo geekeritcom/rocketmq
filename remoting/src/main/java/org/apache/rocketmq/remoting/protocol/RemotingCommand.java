@@ -219,7 +219,7 @@ public class RemotingCommand {
     public static byte[] markProtocolType(int source, SerializeType type) {
         byte[] result = new byte[4];
 
-        result[0] = type.getCode();
+        result[0] = type.getCode(); // 序列化类型
         result[1] = (byte) ((source >> 16) & 0xFF);
         result[2] = (byte) ((source >> 8) & 0xFF);
         result[3] = (byte) (source & 0xFF);

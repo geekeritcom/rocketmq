@@ -89,7 +89,9 @@ public class TlsHelper {
     }
 
     public static SslContext buildSslContext(boolean forClient) throws IOException, CertificateException {
+        // 加载tls配置文件
         File configFile = new File(TlsSystemConfig.tlsConfigFile);
+        // 从tls配置文件中读取相关配置并打印
         extractTlsConfigFromFile(configFile);
         logTheFinalUsedTlsConfig();
 
@@ -101,6 +103,7 @@ public class TlsHelper {
             provider = SslProvider.JDK;
             LOGGER.info("Using JDK SSL provider");
         }
+
 
         if (forClient) {
             if (tlsTestModeEnable) {
@@ -128,7 +131,8 @@ public class TlsHelper {
                     .build();
             }
         } else {
-
+            // 服务端tls通信处理
+            // 测试环境使用
             if (tlsTestModeEnable) {
                 SelfSignedCertificate selfSignedCertificate = new SelfSignedCertificate();
                 return SslContextBuilder
