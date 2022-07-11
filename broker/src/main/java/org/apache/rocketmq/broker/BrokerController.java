@@ -226,10 +226,15 @@ public class BrokerController {
         this.consumerOffsetManager = new ConsumerOffsetManager(this);
         // broker中的topic元数据管理组件
         this.topicConfigManager = new TopicConfigManager(this);
+        // 拉取消息处理组件
         this.pullMessageProcessor = new PullMessageProcessor(this);
+        // 拉取消息请求长轮询挂起服务
         this.pullRequestHoldService = new PullRequestHoldService(this);
+        // 新消息到达后通知长轮询挂起服务的监听器
         this.messageArrivingListener = new NotifyMessageArrivingListener(this.pullRequestHoldService);
+        // consumer id变化监听器
         this.consumerIdsChangeListener = new DefaultConsumerIdsChangeListener(this);
+        // 消费者管理组件
         this.consumerManager = new ConsumerManager(this.consumerIdsChangeListener);
         this.consumerFilterManager = new ConsumerFilterManager(this);
         this.producerManager = new ProducerManager();

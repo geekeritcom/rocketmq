@@ -250,9 +250,12 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
 
         // 通过一系列的校验之后，正式向消息存储组件发起读取请求
         final GetMessageResult getMessageResult =
-                this.brokerController.getMessageStore()
-                                     .getMessage(requestHeader.getConsumerGroup(), requestHeader.getTopic(),
-                                             requestHeader.getQueueId(), requestHeader.getQueueOffset(), requestHeader.getMaxMsgNums(), messageFilter);
+                this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(),
+                                             requestHeader.getTopic(),
+                                             requestHeader.getQueueId(),
+                                             requestHeader.getQueueOffset(),
+                                             requestHeader.getMaxMsgNums(),
+                                             messageFilter);
         if (getMessageResult != null) {
             response.setRemark(getMessageResult.getStatus().name());
             responseHeader.setNextBeginOffset(getMessageResult.getNextBeginOffset());
@@ -260,6 +263,8 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
             responseHeader.setMaxOffset(getMessageResult.getMaxOffset());
 
             // 根据响应结果来向consumer推荐下次拉取消息的BrokerId
+            // 拉取消息存在读写分离的概念，正常情况下在master节点进行消息读写
+            // 但是在某些情况下会建议consumer通过slave节点读取消息
             if (getMessageResult.isSuggestPullingFromSlave()) {
                 responseHeader.setSuggestWhichBrokerId(subscriptionGroupConfig.getWhichBrokerWhenConsumeSlowly());
             } else {
@@ -425,7 +430,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
                     }
                     break;
                 case ResponseCode.PULL_NOT_FOUND:
-
+                    // 当没有拉取到消息尝试挂起请求
                     if (brokerAllowSuspend && hasSuspendFlag) {
                         long pollingTimeMills = suspendTimeoutMillisLong;
                         if (!this.brokerController.getBrokerConfig().isLongPollingEnable()) {

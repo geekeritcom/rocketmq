@@ -17,12 +17,14 @@
 package org.apache.rocketmq.broker.client;
 
 import io.netty.channel.Channel;
+
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.logging.InternalLogger;
@@ -38,17 +40,25 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
  */
 public class ConsumerManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    // 消费者网络连接超时时间
     private static final long CHANNEL_EXPIRED_TIMEOUT = 1000 * 120;
 
-    //
+    // 消费组信息容器
     private final ConcurrentMap<String/* Group */, ConsumerGroupInfo> consumerTable =
-        new ConcurrentHashMap<String, ConsumerGroupInfo>(1024);
+            new ConcurrentHashMap<String, ConsumerGroupInfo>(1024);
     private final ConsumerIdsChangeListener consumerIdsChangeListener;
 
     public ConsumerManager(final ConsumerIdsChangeListener consumerIdsChangeListener) {
         this.consumerIdsChangeListener = consumerIdsChangeListener;
     }
 
+    /**
+     * 基于消费者组与客户端的ID来查询消费者对应的网络连接信息
+     *
+     * @param group
+     * @param clientId
+     * @return
+     */
     public ClientChannelInfo findChannel(final String group, final String clientId) {
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (consumerGroupInfo != null) {
@@ -57,6 +67,13 @@ public class ConsumerManager {
         return null;
     }
 
+    /**
+     * 基于消费者组与对应的topic查询订阅数据
+     *
+     * @param group
+     * @param topic
+     * @return
+     */
     public SubscriptionData findSubscriptionData(final String group, final String topic) {
         ConsumerGroupInfo consumerGroupInfo = this.getConsumerGroupInfo(group);
         if (consumerGroupInfo != null) {
@@ -66,6 +83,11 @@ public class ConsumerManager {
         return null;
     }
 
+    /**
+     * 查询消费组的信息
+     * @param group
+     * @return
+     */
     public ConsumerGroupInfo getConsumerGroupInfo(final String group) {
         return this.consumerTable.get(group);
     }
@@ -79,18 +101,24 @@ public class ConsumerManager {
         return 0;
     }
 
+    /**
+     * 处理消费者网络连接关闭事件
+     * @param remoteAddr
+     * @param channel
+     */
     public void doChannelCloseEvent(final String remoteAddr, final Channel channel) {
         Iterator<Entry<String, ConsumerGroupInfo>> it = this.consumerTable.entrySet().iterator();
         while (it.hasNext()) {
             Entry<String, ConsumerGroupInfo> next = it.next();
             ConsumerGroupInfo info = next.getValue();
+            // 将网络断开的消费者信息从消费者组中移除
             boolean removed = info.doChannelCloseEvent(remoteAddr, channel);
             if (removed) {
                 if (info.getChannelInfoTable().isEmpty()) {
                     ConsumerGroupInfo remove = this.consumerTable.remove(next.getKey());
                     if (remove != null) {
                         log.info("unregister consumer ok, no any connection, and remove consumer group, {}",
-                            next.getKey());
+                                next.getKey());
                         this.consumerIdsChangeListener.handle(ConsumerGroupEvent.UNREGISTER, next.getKey());
                     }
                 }
@@ -100,9 +128,20 @@ public class ConsumerManager {
         }
     }
 
+    /**
+     * 注册消费者
+     * @param group     消费者所属组
+     * @param clientChannelInfo 网络连接信息
+     * @param consumeType   消费类型
+     * @param messageModel  消息类型
+     * @param consumeFromWhere  起始消费策略
+     * @param subList   消费者订阅的topic的数据
+     * @param isNotifyConsumerIdsChangedEnable  是否需要通知消费者ID变化
+     * @return  注册结果
+     */
     public boolean registerConsumer(final String group, final ClientChannelInfo clientChannelInfo,
-        ConsumeType consumeType, MessageModel messageModel, ConsumeFromWhere consumeFromWhere,
-        final Set<SubscriptionData> subList, boolean isNotifyConsumerIdsChangedEnable) {
+                                    ConsumeType consumeType, MessageModel messageModel, ConsumeFromWhere consumeFromWhere,
+                                    final Set<SubscriptionData> subList, boolean isNotifyConsumerIdsChangedEnable) {
 
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (null == consumerGroupInfo) {
@@ -112,8 +151,8 @@ public class ConsumerManager {
         }
 
         boolean r1 =
-            consumerGroupInfo.updateChannel(clientChannelInfo, consumeType, messageModel,
-                consumeFromWhere);
+                consumerGroupInfo.updateChannel(clientChannelInfo, consumeType, messageModel,
+                        consumeFromWhere);
         boolean r2 = consumerGroupInfo.updateSubscription(subList);
 
         if (r1 || r2) {
@@ -122,13 +161,14 @@ public class ConsumerManager {
             }
         }
 
+        // 消费者注册时需要维护该消费者对应的消息过滤数据
         this.consumerIdsChangeListener.handle(ConsumerGroupEvent.REGISTER, group, subList);
 
         return r1 || r2;
     }
 
     public void unregisterConsumer(final String group, final ClientChannelInfo clientChannelInfo,
-        boolean isNotifyConsumerIdsChangedEnable) {
+                                   boolean isNotifyConsumerIdsChangedEnable) {
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (null != consumerGroupInfo) {
             consumerGroupInfo.unregisterChannel(clientChannelInfo);
@@ -153,7 +193,7 @@ public class ConsumerManager {
             String group = next.getKey();
             ConsumerGroupInfo consumerGroupInfo = next.getValue();
             ConcurrentMap<Channel, ClientChannelInfo> channelInfoTable =
-                consumerGroupInfo.getChannelInfoTable();
+                    consumerGroupInfo.getChannelInfoTable();
 
             Iterator<Entry<Channel, ClientChannelInfo>> itChannel = channelInfoTable.entrySet().iterator();
             while (itChannel.hasNext()) {
@@ -162,8 +202,8 @@ public class ConsumerManager {
                 long diff = System.currentTimeMillis() - clientChannelInfo.getLastUpdateTimestamp();
                 if (diff > CHANNEL_EXPIRED_TIMEOUT) {
                     log.warn(
-                        "SCAN: remove expired channel from ConsumerManager consumerTable. channel={}, consumerGroup={}",
-                        RemotingHelper.parseChannelRemoteAddr(clientChannelInfo.getChannel()), group);
+                            "SCAN: remove expired channel from ConsumerManager consumerTable. channel={}, consumerGroup={}",
+                            RemotingHelper.parseChannelRemoteAddr(clientChannelInfo.getChannel()), group);
                     RemotingUtil.closeChannel(clientChannelInfo.getChannel());
                     itChannel.remove();
                 }
@@ -171,8 +211,8 @@ public class ConsumerManager {
 
             if (channelInfoTable.isEmpty()) {
                 log.warn(
-                    "SCAN: remove expired channel from ConsumerManager consumerTable, all clear, consumerGroup={}",
-                    group);
+                        "SCAN: remove expired channel from ConsumerManager consumerTable, all clear, consumerGroup={}",
+                        group);
                 it.remove();
             }
         }
@@ -184,7 +224,7 @@ public class ConsumerManager {
         while (it.hasNext()) {
             Entry<String, ConsumerGroupInfo> entry = it.next();
             ConcurrentMap<String, SubscriptionData> subscriptionTable =
-                entry.getValue().getSubscriptionTable();
+                    entry.getValue().getSubscriptionTable();
             if (subscriptionTable.containsKey(topic)) {
                 groups.add(entry.getKey());
             }
