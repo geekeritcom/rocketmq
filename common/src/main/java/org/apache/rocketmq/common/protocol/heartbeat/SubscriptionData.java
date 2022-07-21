@@ -29,8 +29,10 @@ import java.util.Set;
 public class SubscriptionData implements Comparable<SubscriptionData> {
     public final static String SUB_ALL = "*";
     private boolean classFilterMode = false;
+    // 订阅topic的名称
     private String topic;
     private String subString;
+    // 订阅的标签集合
     private Set<String> tagsSet = new HashSet<String>();
     private Set<Integer> codeSet = new HashSet<Integer>();
     private long subVersion = System.currentTimeMillis();

@@ -160,7 +160,7 @@ public class BrokerController {
     // 调度线程池
     private final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl(
             "BrokerControllerScheduledThread"));
-    // slave节点同步组件
+    // slave节点同步组件(topic元数据、消费者订阅数据、延迟消息数据等)
     private final SlaveSynchronize slaveSynchronize;
     // filter server管理组件
     private final FilterServerManager filterServerManager;
@@ -192,7 +192,7 @@ public class BrokerController {
     private final List<SendMessageHook> sendMessageHookList = new ArrayList<SendMessageHook>();
     private final List<ConsumeMessageHook> consumeMessageHookList = new ArrayList<ConsumeMessageHook>();
 
-        // 线程池资源
+    // 线程池资源
     private ExecutorService sendMessageExecutor;
     private ExecutorService pullMessageExecutor;
     private ExecutorService replyMessageExecutor;

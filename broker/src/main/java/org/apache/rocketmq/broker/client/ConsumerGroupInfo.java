@@ -39,7 +39,7 @@ public class ConsumerGroupInfo {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     // 消费组名称
     private final String groupName;
-    // 消费组订阅信息
+    // 消费组订阅信息，即当前消费组订阅了那些topic
     private final ConcurrentMap<String/* Topic */, SubscriptionData> subscriptionTable =
         new ConcurrentHashMap<String, SubscriptionData>();
     // 当前消费者组下所有客户端的连接信息

@@ -19,7 +19,13 @@ package org.apache.rocketmq.broker.longpolling;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 线程安全的消息拉取请求容器
+ */
 public class ManyPullRequest {
+    /**
+     * 存储针对同一个topic中的同一队列下的消息拉取请求
+     */
     private final ArrayList<PullRequest> pullRequestList = new ArrayList<>();
 
     public synchronized void addPullRequest(final PullRequest pullRequest) {
@@ -30,6 +36,11 @@ public class ManyPullRequest {
         this.pullRequestList.addAll(many);
     }
 
+    /**
+     * 当前方法确保了不会出现由于长时间不清空造成内存溢出
+     *
+     * @return  消息拉取请求集合
+     */
     public synchronized List<PullRequest> cloneListAndClear() {
         if (!this.pullRequestList.isEmpty()) {
             List<PullRequest> result = (ArrayList<PullRequest>) this.pullRequestList.clone();

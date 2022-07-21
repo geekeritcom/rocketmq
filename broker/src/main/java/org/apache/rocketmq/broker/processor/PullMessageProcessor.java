@@ -70,7 +70,8 @@ import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
 /**
- * 拉取消息处理组件
+ * 拉取消息处理组件（底层基于Netty进行网络通信）
+ * 负责处理收到消息拉取请求时的前置参数校验、消息后置处理
  */
 public class PullMessageProcessor extends AsyncNettyRequestProcessor implements NettyRequestProcessor {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -166,12 +167,17 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
         if (hasSubscriptionFlag) {
             try {
                 subscriptionData = FilterAPI.build(
-                    requestHeader.getTopic(), requestHeader.getSubscription(), requestHeader.getExpressionType()
+                        requestHeader.getTopic(),
+                        requestHeader.getSubscription(),
+                        requestHeader.getExpressionType()
                 );
                 if (!ExpressionType.isTagType(subscriptionData.getExpressionType())) {
                     consumerFilterData = ConsumerFilterManager.build(
-                        requestHeader.getTopic(), requestHeader.getConsumerGroup(), requestHeader.getSubscription(),
-                        requestHeader.getExpressionType(), requestHeader.getSubVersion()
+                            requestHeader.getTopic(),
+                            requestHeader.getConsumerGroup(),
+                            requestHeader.getSubscription(),
+                            requestHeader.getExpressionType(),
+                            requestHeader.getSubVersion()
                     );
                     assert consumerFilterData != null;
                 }
@@ -183,6 +189,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
                 return response;
             }
         } else {
+            // 从本地获取对应的消费组的信息
             ConsumerGroupInfo consumerGroupInfo =
                 this.brokerController.getConsumerManager().getConsumerGroupInfo(requestHeader.getConsumerGroup());
             if (null == consumerGroupInfo) {
@@ -199,6 +206,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
                 return response;
             }
 
+            // 从消费组信息中获取对应topic的数据
             subscriptionData = consumerGroupInfo.findSubscriptionData(requestHeader.getTopic());
             if (null == subscriptionData) {
                 log.warn("the consumer's subscription not exist, group: {}, topic:{}", requestHeader.getConsumerGroup(), requestHeader.getTopic());
@@ -239,6 +247,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
             return response;
         }
 
+        // 构建消息过滤器
         MessageFilter messageFilter;
         if (this.brokerController.getBrokerConfig().isFilterSupportRetry()) {
             messageFilter = new ExpressionForRetryMessageFilter(subscriptionData, consumerFilterData,
@@ -250,7 +259,8 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
 
         // 通过一系列的校验之后，正式向消息存储组件发起读取请求
         final GetMessageResult getMessageResult =
-                this.brokerController.getMessageStore().getMessage(requestHeader.getConsumerGroup(),
+                this.brokerController.getMessageStore().getMessage(
+                                             requestHeader.getConsumerGroup(),
                                              requestHeader.getTopic(),
                                              requestHeader.getQueueId(),
                                              requestHeader.getQueueOffset(),
@@ -573,10 +583,12 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
 
     public void executeRequestWhenWakeup(final Channel channel,
         final RemotingCommand request) throws RemotingCommandException {
+        // 通过将挂起的请求封装为独立的任务后提交到线程池，可以将这部分任务异步化，提高消息拉取请求挂起组件的处理效率
         Runnable run = new Runnable() {
             @Override
             public void run() {
                 try {
+                    // 此时再将之前挂起的请求进行回放处理
                     final RemotingCommand response = PullMessageProcessor.this.processRequest(channel, request, false);
 
                     if (response != null) {

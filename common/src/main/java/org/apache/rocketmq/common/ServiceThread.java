@@ -30,6 +30,8 @@ public abstract class ServiceThread implements Runnable {
     private Thread thread;
     protected final CountDownLatch2 waitPoint = new CountDownLatch2(1);
     protected volatile AtomicBoolean hasNotified = new AtomicBoolean(false);
+
+    // volatile关键字的经典适用场景之一
     protected volatile boolean stopped = false;
     protected boolean isDaemon = false;
 
@@ -40,6 +42,11 @@ public abstract class ServiceThread implements Runnable {
 
     }
 
+    /**
+     * 多线程编程下需要学习的组件设计亮点——为每个业务线程提供独立的线程名称，便于后续的问题排查与分析
+     *
+     * @return  当前线程名称
+     */
     public abstract String getServiceName();
 
     public void start() {

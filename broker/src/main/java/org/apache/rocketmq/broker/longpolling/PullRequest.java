@@ -27,10 +27,11 @@ import org.apache.rocketmq.store.MessageFilter;
 public class PullRequest {
     // 拉取消息请求
     private final RemotingCommand requestCommand;
+    // 当前请求对应的客户端网络连接
     private final Channel clientChannel;
     // 请求超时时间
     private final long timeoutMillis;
-    // 挂起时间
+    // 挂起时间戳
     private final long suspendTimestamp;
     // 拉取消息起始位置
     private final long pullFromThisOffset;

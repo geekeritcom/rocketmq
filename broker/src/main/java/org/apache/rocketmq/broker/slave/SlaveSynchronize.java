@@ -29,7 +29,7 @@ import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 
 /**
- * 当前broker节点作为slave节点时
+ * 当前broker节点作为<b>slave节点时</b>
  * 由本组件负责从master节点同步核心数据到本地，具体如下：
  * 1.topic元数据
  * 2.consumer消费元数据
@@ -84,6 +84,7 @@ public class SlaveSynchronize {
                     this.brokerController.getTopicConfigManager().getTopicConfigTable().clear();
                     this.brokerController.getTopicConfigManager().getTopicConfigTable()
                         .putAll(topicWrapper.getTopicConfigTable());
+                    // 将topic的元数据进行持久化
                     this.brokerController.getTopicConfigManager().persist();
 
                     log.info("Update slave topic config from master, {}", masterAddrBak);
