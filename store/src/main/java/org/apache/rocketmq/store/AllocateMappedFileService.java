@@ -33,12 +33,20 @@ import org.apache.rocketmq.store.config.BrokerRole;
 
 /**
  * Create MappedFile in advance
+ * RocketMQ中实现存储模块高性能的核心技术之一，将磁盘文件映射到内存中，提高文件的读写速度
+ *
  */
 public class AllocateMappedFileService extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private static int waitTimeOut = 1000 * 5;
+    /**
+     * 文件分配请求
+     */
     private ConcurrentMap<String, AllocateRequest> requestTable =
         new ConcurrentHashMap<String, AllocateRequest>();
+    /**
+     * 分配请求队列
+     */
     private PriorityBlockingQueue<AllocateRequest> requestQueue =
         new PriorityBlockingQueue<AllocateRequest>();
     private volatile boolean hasException = false;
@@ -219,7 +227,13 @@ public class AllocateMappedFileService extends ServiceThread {
 
     static class AllocateRequest implements Comparable<AllocateRequest> {
         // Full file path
+        /**
+         * mappedFile的映射文件路径
+         */
         private String filePath;
+        /**
+         * 文件大小
+         */
         private int fileSize;
         private CountDownLatch countDownLatch = new CountDownLatch(1);
         private volatile MappedFile mappedFile = null;

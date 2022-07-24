@@ -62,7 +62,11 @@ public class BrokerFastFailure {
         }, 1000, 10, TimeUnit.MILLISECONDS);
     }
 
+    /**
+     * 当本地消息存储组件繁忙时主动将内存中未处理的请求快速返给系统繁忙的响应给客户端，减轻当前系统的负载
+     */
     private void cleanExpiredRequest() {
+        // 判断当前broker中的os cache是否读写并发很高，导致来不及处理请求
         while (this.brokerController.getMessageStore().isOSPageCacheBusy()) {
             try {
                 if (!this.brokerController.getSendThreadPoolQueue().isEmpty()) {

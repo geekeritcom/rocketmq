@@ -21,21 +21,48 @@ import org.apache.rocketmq.common.MixAll;
 
 public class SubscriptionGroupConfig {
 
+    /**
+     * 消费组名称
+     */
     private String groupName;
 
+    /**
+     * 是否启用消费
+     */
     private boolean consumeEnable = true;
+    /**
+     * 是否允许从最小偏移量消费
+     */
     private boolean consumeFromMinEnable = true;
 
+    /**
+     * 是否允许广播消费
+     */
     private boolean consumeBroadcastEnable = true;
 
+    /**
+     * 重试队列数量
+     */
     private int retryQueueNums = 1;
 
+    /**
+     * 重试最大次数
+     */
     private int retryMaxTimes = 16;
 
+    /**
+     *
+     */
     private long brokerId = MixAll.MASTER_ID;
 
+    /**
+     * 当消费者消费较慢时推荐从哪个broker消费
+     */
     private long whichBrokerWhenConsumeSlowly = 1;
 
+    /**
+     * 同个消费组中其他消费者发生变化时是否需要被通知
+     */
     private boolean notifyConsumerIdsChangedEnable = true;
 
     public String getGroupName() {
