@@ -37,6 +37,7 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 
 /**
  * 消费者管理组件
+ * 维护所有已注册的消费组信息
  */
 public class ConsumerManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
@@ -55,9 +56,9 @@ public class ConsumerManager {
     /**
      * 基于消费者组与客户端的ID来查询消费者对应的网络连接信息
      *
-     * @param group
-     * @param clientId
-     * @return
+     * @param group    消费组
+     * @param clientId 消费者客户端ID
+     * @return 网络连接信息
      */
     public ClientChannelInfo findChannel(final String group, final String clientId) {
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
@@ -70,8 +71,8 @@ public class ConsumerManager {
     /**
      * 基于消费者组与对应的topic查询订阅数据
      *
-     * @param group
-     * @param topic
+     * @param group 消费组
+     * @param topic topic名称
      * @return
      */
     public SubscriptionData findSubscriptionData(final String group, final String topic) {
@@ -85,6 +86,7 @@ public class ConsumerManager {
 
     /**
      * 查询消费组的信息
+     *
      * @param group
      * @return
      */
@@ -92,6 +94,12 @@ public class ConsumerManager {
         return this.consumerTable.get(group);
     }
 
+    /**
+     * 消费组的订阅数量
+     *
+     * @param group
+     * @return
+     */
     public int findSubscriptionDataCount(final String group) {
         ConsumerGroupInfo consumerGroupInfo = this.getConsumerGroupInfo(group);
         if (consumerGroupInfo != null) {
@@ -130,29 +138,37 @@ public class ConsumerManager {
 
     /**
      * 注册消费者
-     * @param group     消费者所属组
-     * @param clientChannelInfo 网络连接信息
-     * @param consumeType   消费类型
-     * @param messageModel  消息类型
-     * @param consumeFromWhere  起始消费策略
-     * @param subList   消费者订阅的topic的数据
-     * @param isNotifyConsumerIdsChangedEnable  是否需要通知消费者ID变化
-     * @return  注册结果
+     *
+     * @param group                            消费者所属组
+     * @param clientChannelInfo                网络连接信息
+     * @param consumeType                      消费类型
+     * @param messageModel                     消息类型
+     * @param consumeFromWhere                 起始消费策略
+     * @param subList                          消费者订阅的topic的数据
+     * @param isNotifyConsumerIdsChangedEnable 是否需要通知消费者ID变化
+     * @return 注册结果
      */
-    public boolean registerConsumer(final String group, final ClientChannelInfo clientChannelInfo,
-                                    ConsumeType consumeType, MessageModel messageModel, ConsumeFromWhere consumeFromWhere,
-                                    final Set<SubscriptionData> subList, boolean isNotifyConsumerIdsChangedEnable) {
+    public boolean registerConsumer(final String group,
+                                    final ClientChannelInfo clientChannelInfo,
+                                    ConsumeType consumeType,
+                                    MessageModel messageModel,
+                                    ConsumeFromWhere consumeFromWhere,
+                                    final Set<SubscriptionData> subList,
+                                    boolean isNotifyConsumerIdsChangedEnable) {
 
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
+        // 本地尚不存在对应消费组信息时，对当前注册的消费者所属组进行初始化
         if (null == consumerGroupInfo) {
             ConsumerGroupInfo tmp = new ConsumerGroupInfo(group, consumeType, messageModel, consumeFromWhere);
             ConsumerGroupInfo prev = this.consumerTable.putIfAbsent(group, tmp);
             consumerGroupInfo = prev != null ? prev : tmp;
         }
 
+        // 将当前消费者的信息注册到所属消费组中
         boolean r1 =
                 consumerGroupInfo.updateChannel(clientChannelInfo, consumeType, messageModel,
                         consumeFromWhere);
+        // 将消费者的订阅数据注册到消费组中
         boolean r2 = consumerGroupInfo.updateSubscription(subList);
 
         if (r1 || r2) {
@@ -167,7 +183,15 @@ public class ConsumerManager {
         return r1 || r2;
     }
 
-    public void unregisterConsumer(final String group, final ClientChannelInfo clientChannelInfo,
+    /**
+     * 消费者下线
+     *
+     * @param group                            消费组信息
+     * @param clientChannelInfo                客户端网络连接信息
+     * @param isNotifyConsumerIdsChangedEnable 是否需要通知
+     */
+    public void unregisterConsumer(final String group,
+                                   final ClientChannelInfo clientChannelInfo,
                                    boolean isNotifyConsumerIdsChangedEnable) {
         ConsumerGroupInfo consumerGroupInfo = this.consumerTable.get(group);
         if (null != consumerGroupInfo) {
@@ -186,6 +210,9 @@ public class ConsumerManager {
         }
     }
 
+    /**
+     * 定期扫描不活跃的消费者
+     */
     public void scanNotActiveChannel() {
         Iterator<Entry<String, ConsumerGroupInfo>> it = this.consumerTable.entrySet().iterator();
         while (it.hasNext()) {
@@ -195,10 +222,13 @@ public class ConsumerManager {
             ConcurrentMap<Channel, ClientChannelInfo> channelInfoTable =
                     consumerGroupInfo.getChannelInfoTable();
 
+            // 获取当前消费组中的所有客户端连接
             Iterator<Entry<Channel, ClientChannelInfo>> itChannel = channelInfoTable.entrySet().iterator();
             while (itChannel.hasNext()) {
                 Entry<Channel, ClientChannelInfo> nextChannel = itChannel.next();
                 ClientChannelInfo clientChannelInfo = nextChannel.getValue();
+                // 确认客户端最终与broker的交互时间是否超出指定超时时间
+                // TODO 如何更优雅地对客户端网络连接判定过期
                 long diff = System.currentTimeMillis() - clientChannelInfo.getLastUpdateTimestamp();
                 if (diff > CHANNEL_EXPIRED_TIMEOUT) {
                     log.warn(

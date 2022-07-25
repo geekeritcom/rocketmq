@@ -32,7 +32,9 @@ import org.apache.rocketmq.store.ConsumeQueueExt;
 
 /**
  * 该组件的职责：挂起无法被立即满足的消息拉取请求
- * 处理流程：周期性检查所有topic@queue的拉取请求能够被满足或者是否超时，然后将符合条件的拉取请求交给拉取处理器处理
+ * 处理流程：
+ * 1.周期性检查所有topic@queue的拉取请求能够被满足或者是否超时，然后将符合条件的拉取请求交给拉取处理器处理
+ * 2.当broker接收到新消息后会主动通知请求挂起组件 {@link NotifyMessageArrivingListener}
  */
 public class PullRequestHoldService extends ServiceThread {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
