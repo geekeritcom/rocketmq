@@ -95,6 +95,7 @@ public class MappedFile extends ReferenceResource {
      */
     private long fileFromOffset;
     private File file;
+    // 磁盘文件在内存中的映射
     private MappedByteBuffer mappedByteBuffer;
     private volatile long storeTimestamp = 0;
     private boolean firstCreateInQueue = false;
