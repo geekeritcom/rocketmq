@@ -203,7 +203,9 @@ public class AllocateMappedFileService extends ServiceThread {
                         mappedFile.init(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
                     } catch (RuntimeException e) {
                         log.warn("Use default implementation.");
-                        mappedFile = new MappedFile(req.getFilePath(), req.getFileSize(), messageStore.getTransientStorePool());
+                        mappedFile = new MappedFile(req.getFilePath(),
+                                req.getFileSize(),
+                                messageStore.getTransientStorePool());
                     }
                 } else {
                     mappedFile = new MappedFile(req.getFilePath(), req.getFileSize());

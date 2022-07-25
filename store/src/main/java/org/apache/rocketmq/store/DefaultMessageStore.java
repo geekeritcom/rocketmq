@@ -192,6 +192,7 @@ public class DefaultMessageStore implements MessageStore {
         this.messageStoreConfig = messageStoreConfig;
         this.brokerStatsManager = brokerStatsManager;
         this.allocateMappedFileService = new AllocateMappedFileService(this);
+        // 生产模式下一般采用dleger的模式来保证消息写入的高可用
         if (messageStoreConfig.isEnableDLegerCommitLog()) {
             this.commitLog = new DLedgerCommitLog(this);
         } else {
@@ -257,6 +258,7 @@ public class DefaultMessageStore implements MessageStore {
             }
 
             // load Commit Log
+            // 从磁盘加载CommitLog到内存中
             result = result && this.commitLog.load();
 
             // load Consume Queue

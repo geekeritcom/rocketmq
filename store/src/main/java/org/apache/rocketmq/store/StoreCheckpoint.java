@@ -27,13 +27,29 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * CommitLog存储检查点组件
+ */
 public class StoreCheckpoint {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    /**
+     * 检查点随机读写文件
+     */
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
+
+    /**
+     * 物理消息时间戳，位于checkpoint文件的0~7字节
+     */
     private volatile long physicMsgTimestamp = 0;
+    /**
+     * 逻辑消息时间戳，位于checkpoint文件的8~15字节
+     */
     private volatile long logicsMsgTimestamp = 0;
+    /**
+     * 索引消息时间戳，位于checkpoint文件的16~24字节
+     */
     private volatile long indexMsgTimestamp = 0;
 
     public StoreCheckpoint(final String scpPath) throws IOException {
@@ -41,6 +57,7 @@ public class StoreCheckpoint {
         MappedFile.ensureDirOK(file.getParent());
         boolean fileExists = file.exists();
 
+        // 创建检查点对应文件并进行内存映射
         this.randomAccessFile = new RandomAccessFile(file, "rw");
         this.fileChannel = this.randomAccessFile.getChannel();
         this.mappedByteBuffer = fileChannel.map(MapMode.READ_WRITE, 0, MappedFile.OS_PAGE_SIZE);
@@ -63,6 +80,7 @@ public class StoreCheckpoint {
     }
 
     public void shutdown() {
+        // 组件关闭时需要确保将记录写入磁盘文件中
         this.flush();
 
         // unmap mappedByteBuffer
