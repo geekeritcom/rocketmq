@@ -27,6 +27,12 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.ChannelEventListener;
 
+/**
+ * 网络连接事件监听器
+ * 主要负责两部分内容
+ * 1.定时对生产者、消费者以及过滤器的失活客户端进行处理
+ * 2.当broker与其他客户端的网络连接发生异常、关闭等事件时进行处理
+ */
 public class ClientHousekeepingService implements ChannelEventListener {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private final BrokerController brokerController;

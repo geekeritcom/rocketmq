@@ -25,12 +25,31 @@ import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
 public class CheckTransactionStateRequestHeader implements CommandCustomHeader {
+    /**
+     * 事务状态表偏移量
+     */
     @CFNotNull
     private Long tranStateTableOffset;
+
+    /**
+     * commitLog偏移量
+     */
     @CFNotNull
     private Long commitLogOffset;
+
+    /**
+     * 消息ID
+     */
     private String msgId;
+
+    /**
+     * 当前事务ID
+     */
     private String transactionId;
+
+    /**
+     * 偏移量消息ID
+     */
     private String offsetMsgId;
 
     @Override
