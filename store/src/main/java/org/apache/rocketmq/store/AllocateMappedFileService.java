@@ -34,6 +34,7 @@ import org.apache.rocketmq.store.config.BrokerRole;
 /**
  * Create MappedFile in advance
  * RocketMQ中实现存储模块高性能的核心技术之一，将磁盘文件映射到内存中，提高文件的读写速度
+ * 异步创建MappedFile,通过CountDownLatch+volatile实现多线程间的任务协调
  *
  */
 public class AllocateMappedFileService extends ServiceThread {
@@ -43,12 +44,12 @@ public class AllocateMappedFileService extends ServiceThread {
      * 文件分配请求
      */
     private ConcurrentMap<String, AllocateRequest> requestTable =
-        new ConcurrentHashMap<String, AllocateRequest>();
+            new ConcurrentHashMap<String, AllocateRequest>();
     /**
      * 分配请求队列
      */
     private PriorityBlockingQueue<AllocateRequest> requestQueue =
-        new PriorityBlockingQueue<AllocateRequest>();
+            new PriorityBlockingQueue<AllocateRequest>();
     private volatile boolean hasException = false;
     private DefaultMessageStore messageStore;
 
@@ -56,25 +57,44 @@ public class AllocateMappedFileService extends ServiceThread {
         this.messageStore = messageStore;
     }
 
+    /**
+     * 获取MappedFile
+     *
+     * @param nextFilePath
+     * @param nextNextFilePath
+     * @param fileSize         需要创建的文件大小
+     * @return
+     */
     public MappedFile putRequestAndReturnMappedFile(String nextFilePath, String nextNextFilePath, int fileSize) {
         int canSubmitRequests = 2;
+        // 需要满足多个条件：
+        // 1.是否开启瞬时存储机制
+        // 2.是否开启异步刷盘
+        // 3.当前节点身份为Master节点
         if (this.messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
             if (this.messageStore.getMessageStoreConfig().isFastFailIfNoBufferInStorePool()
-                && BrokerRole.SLAVE != this.messageStore.getMessageStoreConfig().getBrokerRole()) { //if broker is slave, don't fast fail even no buffer in pool
-                canSubmitRequests = this.messageStore.getTransientStorePool().availableBufferNums() - this.requestQueue.size();
+                    && BrokerRole.SLAVE != this.messageStore.getMessageStoreConfig()
+                                                            .getBrokerRole()) { //if broker is slave, don't fast fail even no buffer in pool
+                // 启用瞬时存储技术后，请求队列中的请求数量+待提交的请求数量<=瞬时存储池可用buffer数量
+                canSubmitRequests = this.messageStore.getTransientStorePool()
+                                                     .availableBufferNums() - this.requestQueue.size();
             }
         }
 
+        // 构建分配请求
         AllocateRequest nextReq = new AllocateRequest(nextFilePath, fileSize);
         boolean nextPutOK = this.requestTable.putIfAbsent(nextFilePath, nextReq) == null;
 
         if (nextPutOK) {
+            // 此时无法再提交请求
             if (canSubmitRequests <= 0) {
                 log.warn("[NOTIFYME]TransientStorePool is not enough, so create mapped file error, " +
-                    "RequestQueueSize : {}, StorePoolSize: {}", this.requestQueue.size(), this.messageStore.getTransientStorePool().availableBufferNums());
+                        "RequestQueueSize : {}, StorePoolSize: {}", this.requestQueue.size(), this.messageStore.getTransientStorePool()
+                                                                                                               .availableBufferNums());
                 this.requestTable.remove(nextFilePath);
                 return null;
             }
+            // 分配请求入队
             boolean offerOK = this.requestQueue.offer(nextReq);
             if (!offerOK) {
                 log.warn("never expected here, add a request to preallocate queue failed");
@@ -82,12 +102,14 @@ public class AllocateMappedFileService extends ServiceThread {
             canSubmitRequests--;
         }
 
+        // 再次创建预分配请求
         AllocateRequest nextNextReq = new AllocateRequest(nextNextFilePath, fileSize);
         boolean nextNextPutOK = this.requestTable.putIfAbsent(nextNextFilePath, nextNextReq) == null;
         if (nextNextPutOK) {
             if (canSubmitRequests <= 0) {
                 log.warn("[NOTIFYME]TransientStorePool is not enough, so skip preallocate mapped file, " +
-                    "RequestQueueSize : {}, StorePoolSize: {}", this.requestQueue.size(), this.messageStore.getTransientStorePool().availableBufferNums());
+                        "RequestQueueSize : {}, StorePoolSize: {}", this.requestQueue.size(), this.messageStore.getTransientStorePool()
+                                                                                                               .availableBufferNums());
                 this.requestTable.remove(nextNextFilePath);
             } else {
                 boolean offerOK = this.requestQueue.offer(nextNextReq);
@@ -102,9 +124,11 @@ public class AllocateMappedFileService extends ServiceThread {
             return null;
         }
 
+        // 查看第一个分配请求的执行结果
         AllocateRequest result = this.requestTable.get(nextFilePath);
         try {
             if (result != null) {
+                // 第一个分配请求尚未完成时进行等待
                 boolean waitOK = result.getCountDownLatch().await(waitTimeOut, TimeUnit.MILLISECONDS);
                 if (!waitOK) {
                     log.warn("create mmap timeout " + result.getFilePath() + " " + result.getFileSize());
@@ -172,6 +196,7 @@ public class AllocateMappedFileService extends ServiceThread {
                 long beginTime = System.currentTimeMillis();
 
                 MappedFile mappedFile;
+                // 基于不同得配置来创建MappedFile
                 if (messageStore.getMessageStoreConfig().isTransientStorePoolEnable()) {
                     try {
                         mappedFile = ServiceLoader.load(MappedFile.class).iterator().next();
@@ -192,6 +217,7 @@ public class AllocateMappedFileService extends ServiceThread {
                 }
 
                 // pre write mappedFile
+                // 尝试对MappedFile进行预热
                 if (mappedFile.getFileSize() >= this.messageStore.getMessageStoreConfig()
                     .getMappedFileSizeCommitLog()
                     &&
@@ -212,6 +238,7 @@ public class AllocateMappedFileService extends ServiceThread {
             log.warn(this.getServiceName() + " service has exception. ", e);
             this.hasException = true;
             if (null != req) {
+                // 创建过程中出现IO异常时会再次入队重试
                 requestQueue.offer(req);
                 try {
                     Thread.sleep(1);
@@ -236,6 +263,9 @@ public class AllocateMappedFileService extends ServiceThread {
          */
         private int fileSize;
         private CountDownLatch countDownLatch = new CountDownLatch(1);
+        /**
+         * 确保外部线程与创建文件线程的可见性
+         */
         private volatile MappedFile mappedFile = null;
 
         public AllocateRequest(String filePath, int fileSize) {

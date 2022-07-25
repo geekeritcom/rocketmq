@@ -19,9 +19,24 @@ package org.apache.rocketmq.store;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ReferenceResource {
+    /**
+     * 文件引用计数
+     */
     protected final AtomicLong refCount = new AtomicLong(1);
+
+    /**
+     * 可用标识
+     */
     protected volatile boolean available = true;
+
+    /**
+     * 清理结束标识
+     */
     protected volatile boolean cleanupOver = false;
+
+    /**
+     * 首次被关闭得时间戳
+     */
     private volatile long firstShutdownTimestamp = 0;
 
     public synchronized boolean hold() {
