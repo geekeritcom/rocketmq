@@ -207,6 +207,9 @@ public class MappedFile extends ReferenceResource {
         this.fileName = fileName;
         this.fileSize = fileSize;
         this.file = new File(fileName);
+        // 每个磁盘文件的名称，都是CommitLog里的一个偏移量
+        // 也就是说一个CommitLog会拆分为多个MappedFile
+        // 因此这里将文件名称转为long型变量代表的就是这个MappedFile在CommitLog中的哪个偏移量开始写入数据
         this.fileFromOffset = Long.parseLong(this.file.getName());
         boolean ok = false;
 

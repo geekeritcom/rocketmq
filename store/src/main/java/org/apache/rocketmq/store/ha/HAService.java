@@ -41,22 +41,49 @@ import org.apache.rocketmq.store.CommitLog;
 import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.PutMessageStatus;
 
+/**
+ * 内置的主从同步服务
+ */
 public class HAService {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
+    /**
+     * 连接数量
+     */
     private final AtomicInteger connectionCount = new AtomicInteger(0);
 
+    /**
+     * 主从节点之间建立的网络连接
+     */
     private final List<HAConnection> connectionList = new LinkedList<>();
 
+    /**
+     * 接收socket连接组件
+     */
     private final AcceptSocketService acceptSocketService;
 
+    /**
+     * 消息存储组件
+     */
     private final DefaultMessageStore defaultMessageStore;
 
+    /**
+     * 线程间通信对象
+     */
     private final WaitNotifyObject waitNotifyObject = new WaitNotifyObject();
+    /**
+     * 已经推送到slave节点的最大消息偏移量
+     */
     private final AtomicLong push2SlaveMaxOffset = new AtomicLong(0);
 
+    /**
+     * 组传输服务
+     */
     private final GroupTransferService groupTransferService;
 
+    /**
+     * 主从同步客户端组件
+     */
     private final HAClient haClient;
 
     public HAService(final DefaultMessageStore defaultMessageStore) throws IOException {
@@ -169,6 +196,8 @@ public class HAService {
         /**
          * Starts listening to slave connections.
          *
+         * 开始基于nio监听从节点的网络连接
+         *
          * @throws Exception If fails.
          */
         public void beginAccept() throws Exception {
@@ -216,7 +245,9 @@ public class HAService {
                                         + sc.socket().getRemoteSocketAddress());
 
                                     try {
+                                        // 创建主从节点直接的网络连接
                                         HAConnection conn = new HAConnection(HAService.this, sc);
+                                        // 启动内部读写线程
                                         conn.start();
                                         HAService.this.addConnection(conn);
                                     } catch (Exception e) {
