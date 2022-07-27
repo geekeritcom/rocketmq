@@ -105,6 +105,17 @@ public class MappedFile extends ReferenceResource {
     public MappedFile() {
     }
 
+    /**
+     * 何时会创建MappedFile
+     * 1.Broker首次启动时进行初始化
+     * 2.Broker停机后启动时从磁盘加载
+     * 3.Broker存储新的消息时发现空间不足，需要创建
+     * 4.创建索引文件
+     *
+     * @param fileName 文件名称
+     * @param fileSize 文件大小
+     * @throws IOException
+     */
     public MappedFile(final String fileName, final int fileSize) throws IOException {
         init(fileName, fileSize);
     }

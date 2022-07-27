@@ -171,6 +171,7 @@ public class MappedFileQueue {
     public boolean load() {
         // 列出存储目录下的所有文件
         File dir = new File(this.storePath);
+        // 由于是以偏移量作为文件名的，因此可以对文件进行排序后加载
         File[] files = dir.listFiles();
         if (files != null) {
             // ascending order
@@ -325,8 +326,10 @@ public class MappedFileQueue {
     }
 
     public long getMaxOffset() {
+        // 获取可以写入的MappedFile
         MappedFile mappedFile = getLastMappedFile();
         if (mappedFile != null) {
+            // 将MappedFile的物理偏移量+MappedFile当前可读的位置返回
             return mappedFile.getFileFromOffset() + mappedFile.getReadPosition();
         }
         return 0;
@@ -496,6 +499,7 @@ public class MappedFileQueue {
             MappedFile firstMappedFile = this.getFirstMappedFile();
             MappedFile lastMappedFile = this.getLastMappedFile();
             if (firstMappedFile != null && lastMappedFile != null) {
+                // 对offset进行校验，避免查询超出范围的消息
                 if (offset < firstMappedFile.getFileFromOffset() || offset >= lastMappedFile.getFileFromOffset() + this.mappedFileSize) {
                     LOG_ERROR.warn("Offset not matched. Request offset: {}, firstOffset: {}, lastOffset: {}, mappedFileSize: {}, mappedFiles count: {}",
                             offset,
@@ -504,6 +508,9 @@ public class MappedFileQueue {
                             this.mappedFileSize,
                             this.mappedFiles.size());
                 } else {
+                    // 首先通过offset除去单个文件大小后算出逻辑上的索引位置
+                    // 由于MQ内部会删除过期文件，因此这里再对首个文件的偏移量计算索引位置
+                    // 这样二者的差值就是指定偏移量所在文件的相对偏移量
                     int index = (int) ((offset / this.mappedFileSize) - (firstMappedFile.getFileFromOffset() / this.mappedFileSize));
                     MappedFile targetFile = null;
                     try {
@@ -511,11 +518,13 @@ public class MappedFileQueue {
                     } catch (Exception ignored) {
                     }
 
+                    // 从当前内存中获取到了文件，对offset进行再次校验，确保定位到的文件包含指定的offset
                     if (targetFile != null && offset >= targetFile.getFileFromOffset()
                             && offset < targetFile.getFileFromOffset() + this.mappedFileSize) {
                         return targetFile;
                     }
 
+                    // 当通过上述方式无法定位到具体文件时，就需要对所有MappedFile的偏移量进行对比，查看是否包含指定偏移量
                     for (MappedFile tmpMappedFile : this.mappedFiles) {
                         if (offset >= tmpMappedFile.getFileFromOffset()
                                 && offset < tmpMappedFile.getFileFromOffset() + this.mappedFileSize) {
@@ -524,6 +533,7 @@ public class MappedFileQueue {
                     }
                 }
 
+                // 如果上述还是无法定位到且允许返回第一个文件时，返回第一个MappedFile
                 if (returnFirstOnNotFound) {
                     return firstMappedFile;
                 }

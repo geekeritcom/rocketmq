@@ -178,10 +178,19 @@ public class CommitLog {
         return this.getData(offset, offset == 0);
     }
 
+    /**
+     * 从指定偏移量查询数据
+     * @param offset
+     * @param returnFirstOnNotFound
+     * @return
+     */
     public SelectMappedBufferResult getData(final long offset, final boolean returnFirstOnNotFound) {
+        // 获取单个MappedFile大小
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMappedFileSizeCommitLog();
+        // 通过offset从队列组件中获取消息所在的MappedFile
         MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, returnFirstOnNotFound);
         if (mappedFile != null) {
+            // 使用偏移量（总偏移量）对文件大小取模后得到当前偏移量在文件中的位置（相对位置）
             int pos = (int) (offset % mappedFileSize);
             SelectMappedBufferResult result = mappedFile.selectMappedBuffer(pos);
             return result;
@@ -192,21 +201,26 @@ public class CommitLog {
 
     /**
      * When the normal exit, data recovery, all memory data have been flush
+     * broker正常退出的情况下需要将内存数据全部刷回磁盘，便于下次启动时从磁盘文件加载数据
      */
     public void recoverNormally(long maxPhyOffsetOfConsumeQueue) {
         boolean checkCRCOnRecover = this.defaultMessageStore.getMessageStoreConfig().isCheckCRCOnRecover();
         final List<MappedFile> mappedFiles = this.mappedFileQueue.getMappedFiles();
         if (!mappedFiles.isEmpty()) {
             // Began to recover from the last third file
+            // 尝试从倒数第三个文件开始恢复，不足三个文件时从头开始
             int index = mappedFiles.size() - 3;
             if (index < 0)
                 index = 0;
 
             MappedFile mappedFile = mappedFiles.get(index);
+            // 获取文件中有数据部分的内存数据
             ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
+            // 获取MappedFile的起始物理偏移量
             long processOffset = mappedFile.getFileFromOffset();
             long mappedFileOffset = 0;
             while (true) {
+                //
                 DispatchRequest dispatchRequest = this.checkMessageAndReturnSize(byteBuffer, checkCRCOnRecover);
                 int size = dispatchRequest.getMsgSize();
                 // Normal data
@@ -274,10 +288,10 @@ public class CommitLog {
     public DispatchRequest checkMessageAndReturnSize(java.nio.ByteBuffer byteBuffer, final boolean checkCRC,
                                                      final boolean readBody) {
         try {
-            // 1 TOTAL SIZE
+            // 1 TOTAL SIZE  获取内存数据大小
             int totalSize = byteBuffer.getInt();
 
-            // 2 MAGIC CODE
+            // 2 MAGIC CODE  获取文件魔数进行校验，确认当前内存区域是否包含有效内容
             int magicCode = byteBuffer.getInt();
             switch (magicCode) {
                 case MESSAGE_MAGIC_CODE:
@@ -291,18 +305,25 @@ public class CommitLog {
 
             byte[] bytesContent = new byte[totalSize];
 
+            // 读取消息内容的校验和
             int bodyCRC = byteBuffer.getInt();
 
+            // 读取消息所属的queueId
             int queueId = byteBuffer.getInt();
 
+            // 读取消息的flag标识
             int flag = byteBuffer.getInt();
 
+            // 读取消息在queue中的逻辑偏移量
             long queueOffset = byteBuffer.getLong();
 
+            // 读取消息在完整CommitLog中的物理偏移量
             long physicOffset = byteBuffer.getLong();
 
+            // 读取消息系统flag
             int sysFlag = byteBuffer.getInt();
 
+            // 读取消息产生时间戳
             long bornTimeStamp = byteBuffer.getLong();
 
             ByteBuffer byteBuffer1;
@@ -312,6 +333,7 @@ public class CommitLog {
                 byteBuffer1 = byteBuffer.get(bytesContent, 0, 16 + 4);
             }
 
+            // 读取消息存储时间
             long storeTimestamp = byteBuffer.getLong();
 
             ByteBuffer byteBuffer2;
@@ -321,15 +343,19 @@ public class CommitLog {
                 byteBuffer2 = byteBuffer.get(bytesContent, 0, 16 + 4);
             }
 
+            // 获取消息重新消费次数
             int reconsumeTimes = byteBuffer.getInt();
 
+            // 获取prepared事务消息偏移量
             long preparedTransactionOffset = byteBuffer.getLong();
 
+            // 消息长度
             int bodyLen = byteBuffer.getInt();
             if (bodyLen > 0) {
+                // 当需要读取时再读取消息内容
                 if (readBody) {
                     byteBuffer.get(bytesContent, 0, bodyLen);
-
+                    // 校验消息内容
                     if (checkCRC) {
                         int crc = UtilAll.crc32(bytesContent, 0, bodyLen);
                         if (crc != bodyCRC) {
@@ -342,6 +368,7 @@ public class CommitLog {
                 }
             }
 
+            // 读取topic长度
             byte topicLen = byteBuffer.get();
             byteBuffer.get(bytesContent, 0, topicLen);
             String topic = new String(bytesContent, 0, topicLen, MessageDecoder.CHARSET_UTF8);
@@ -350,6 +377,7 @@ public class CommitLog {
             String keys = "";
             String uniqKey = null;
 
+            // 读取消息属性长度
             short propertiesLength = byteBuffer.getShort();
             Map<String, String> propertiesMap = null;
             if (propertiesLength > 0) {
