@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ReferenceResource {
     /**
-     * 文件引用计数
+     * 资源引用计数
      */
     protected final AtomicLong refCount = new AtomicLong(1);
 
@@ -39,6 +39,11 @@ public abstract class ReferenceResource {
      */
     private volatile long firstShutdownTimestamp = 0;
 
+    /**
+     * 使用当前文件资源
+     *
+     * @return
+     */
     public synchronized boolean hold() {
         if (this.isAvailable()) {
             if (this.refCount.getAndIncrement() > 0) {
@@ -56,12 +61,16 @@ public abstract class ReferenceResource {
     }
 
     public void shutdown(final long intervalForcibly) {
+        // 首先更新当前可用标识
         if (this.available) {
             this.available = false;
             this.firstShutdownTimestamp = System.currentTimeMillis();
+            // 尝试释放当前资源
             this.release();
         } else if (this.getRefCount() > 0) {
+            // 再次判断上次释放时间是否超出了强制删除的最大间隔
             if ((System.currentTimeMillis() - this.firstShutdownTimestamp) >= intervalForcibly) {
+                // 进行强制释放
                 this.refCount.set(-1000 - this.getRefCount());
                 this.release();
             }
@@ -70,6 +79,7 @@ public abstract class ReferenceResource {
 
     public void release() {
         long value = this.refCount.decrementAndGet();
+        // 当释放后仍存在引用时无法完全释放
         if (value > 0)
             return;
 

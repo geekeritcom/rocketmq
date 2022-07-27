@@ -134,9 +134,17 @@ public class MappedFile extends ReferenceResource {
         }
     }
 
+    /**
+     * 对内存映射区域进行清理
+     *
+     * @param buffer 内存映射区域
+     */
     public static void clean(final ByteBuffer buffer) {
         if (buffer == null || !buffer.isDirect() || buffer.capacity() == 0)
             return;
+        // DirectByteBuffer的正确释放方式
+        // 需要注意DirectByteBuffer是否被外部包裹引用
+        // 之后需要获取到组件内部的cleaner对象，调用其clean方法释放资源
         invoke(invoke(viewed(buffer), "cleaner"), "clean");
     }
 
@@ -166,6 +174,7 @@ public class MappedFile extends ReferenceResource {
     private static ByteBuffer viewed(ByteBuffer buffer) {
         String methodName = "viewedBuffer";
         Method[] methods = buffer.getClass().getMethods();
+        // 如果属于DirectByteBuffer可能会被外部包裹
         for (int i = 0; i < methods.length; i++) {
             if (methods[i].getName().equals("attachment")) {
                 methodName = "attachment";
@@ -173,6 +182,7 @@ public class MappedFile extends ReferenceResource {
             }
         }
 
+        // 当未被包裹时直接返回buffer即可，否则就需要递归找出原生的引用buffer
         ByteBuffer viewedBuffer = (ByteBuffer) invoke(buffer, methodName);
         if (viewedBuffer == null)
             return buffer;
@@ -496,6 +506,7 @@ public class MappedFile extends ReferenceResource {
         }
 
         clean(this.mappedByteBuffer);
+        // 调整统计项
         TOTAL_MAPPED_VIRTUAL_MEMORY.addAndGet(this.fileSize * (-1));
         TOTAL_MAPPED_FILES.decrementAndGet();
         log.info("unmap file[REF:" + currentRef + "] " + this.fileName + " OK");
@@ -503,14 +514,17 @@ public class MappedFile extends ReferenceResource {
     }
 
     public boolean destroy(final long intervalForcibly) {
+        // 关闭当前组件
         this.shutdown(intervalForcibly);
 
         if (this.isCleanupOver()) {
             try {
+                // 关闭绑定的nio文件通道
                 this.fileChannel.close();
                 log.info("close file channel " + this.fileName + " OK");
 
                 long beginTime = System.currentTimeMillis();
+                // 删除物理文件
                 boolean result = this.file.delete();
                 log.info("delete file[REF:" + this.getRefCount() + "] " + this.fileName
                         + (result ? " OK, " : " Failed, ") + "W:" + this.getWrotePosition() + " M:"

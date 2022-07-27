@@ -153,6 +153,15 @@ public class CommitLog {
         return this.mappedFileQueue.remainHowManyDataToFlush();
     }
 
+    /**
+     * 删除过期的MappedFile
+     *
+     * @param expiredTime   过期时间
+     * @param deleteFilesInterval   删除间隔
+     * @param intervalForcibly
+     * @param cleanImmediately      是否立即清理
+     * @return
+     */
     public int deleteExpiredFile(
             final long expiredTime,
             final int deleteFilesInterval,
@@ -949,8 +958,8 @@ public class CommitLog {
     /**
      * 提交刷盘请求
      *
-     * @param result    消息写入结果
-     * @param messageExt    消息内容
+     * @param result     消息写入结果
+     * @param messageExt 消息内容
      * @return
      */
     public CompletableFuture<PutMessageStatus> submitFlushRequest(AppendMessageResult result, MessageExt messageExt) {

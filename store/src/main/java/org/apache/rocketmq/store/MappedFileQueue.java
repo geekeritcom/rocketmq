@@ -135,6 +135,11 @@ public class MappedFileQueue {
         this.deleteExpiredFile(willRemoveFiles);
     }
 
+    /**
+     * 将已删除的文件从Queue中剔除
+     *
+     * @param files 已删除的文件列表
+     */
     void deleteExpiredFile(List<MappedFile> files) {
 
         if (!files.isEmpty()) {
@@ -164,6 +169,7 @@ public class MappedFileQueue {
      * @return
      */
     public boolean load() {
+        // 列出存储目录下的所有文件
         File dir = new File(this.storePath);
         File[] files = dir.listFiles();
         if (files != null) {
@@ -356,6 +362,7 @@ public class MappedFileQueue {
                                        final int deleteFilesInterval,
                                        final long intervalForcibly,
                                        final boolean cleanImmediately) {
+        // 获取到MappedFile数组
         Object[] mfs = this.copyMappedFiles(0);
 
         if (null == mfs)
@@ -367,18 +374,22 @@ public class MappedFileQueue {
         if (null != mfs) {
             for (int i = 0; i < mfsLength; i++) {
                 MappedFile mappedFile = (MappedFile) mfs[i];
+                // mappedFile最后更新时间+配置的过期时间=mappedFile的最大存活时间
                 long liveMaxTimestamp = mappedFile.getLastModifiedTimestamp() + expiredTime;
+                // 当前时间已经超出mappedFile的最大存活时间或者需要被立即删除时执行删除操作
                 if (System.currentTimeMillis() >= liveMaxTimestamp || cleanImmediately) {
                     if (mappedFile.destroy(intervalForcibly)) {
                         files.add(mappedFile);
                         deleteCount++;
 
+                        // 单次最多删除10个文件
                         if (files.size() >= DELETE_FILES_BATCH_MAX) {
                             break;
                         }
 
                         if (deleteFilesInterval > 0 && (i + 1) < mfsLength) {
                             try {
+                                // 避免磁盘IO负载过高
                                 Thread.sleep(deleteFilesInterval);
                             } catch (InterruptedException e) {
                             }
