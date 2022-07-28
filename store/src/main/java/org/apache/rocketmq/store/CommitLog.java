@@ -201,7 +201,7 @@ public class CommitLog {
 
     /**
      * When the normal exit, data recovery, all memory data have been flush
-     * broker正常退出的情况下需要将内存数据全部刷回磁盘，便于下次启动时从磁盘文件加载数据
+     * broker正常退出的情况下需要将内存数据全部刷回磁盘，便于启动时从磁盘文件加载数据
      */
     public void recoverNormally(long maxPhyOffsetOfConsumeQueue) {
         boolean checkCRCOnRecover = this.defaultMessageStore.getMessageStoreConfig().isCheckCRCOnRecover();
@@ -219,6 +219,7 @@ public class CommitLog {
             // 获取MappedFile的起始物理偏移量
             long processOffset = mappedFile.getFileFromOffset();
             long mappedFileOffset = 0;
+            // 将尾部三个MappedFile刷入磁盘
             while (true) {
                 //
                 DispatchRequest dispatchRequest = this.checkMessageAndReturnSize(byteBuffer, checkCRCOnRecover);
@@ -251,6 +252,7 @@ public class CommitLog {
                 }
             }
 
+            // 计算出已经处理的消息偏移量
             processOffset += mappedFileOffset;
             this.mappedFileQueue.setFlushedWhere(processOffset);
             this.mappedFileQueue.setCommittedWhere(processOffset);
@@ -396,6 +398,7 @@ public class CommitLog {
 
                 // Timing message processing
                 {
+                    // 查看消息是否属于延迟消息
                     String t = propertiesMap.get(MessageConst.PROPERTY_DELAY_TIME_LEVEL);
                     if (TopicValidator.RMQ_SYS_SCHEDULE_TOPIC.equals(topic) && t != null) {
                         int delayLevel = Integer.parseInt(t);
@@ -405,6 +408,7 @@ public class CommitLog {
                         }
 
                         if (delayLevel > 0) {
+                            // 消息存储时间+延迟时间计算消息的投递时间
                             tagsCode = this.defaultMessageStore.getScheduleMessageService().computeDeliverTimestamp(delayLevel,
                                     storeTimestamp);
                         }
@@ -412,6 +416,7 @@ public class CommitLog {
                 }
             }
 
+            // 计算消息长度
             int readLength = calMsgLength(sysFlag, bodyLen, topicLen, propertiesLength);
             if (totalSize != readLength) {
                 doNothingForDeadCode(reconsumeTimes);
@@ -499,6 +504,7 @@ public class CommitLog {
                 mappedFile = mappedFiles.get(index);
             }
 
+            // 获取MappedFile内存区域
             ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
             long processOffset = mappedFile.getFileFromOffset();
             long mappedFileOffset = 0;
@@ -563,6 +569,11 @@ public class CommitLog {
         }
     }
 
+    /**
+     * 确认指定MappedFile文件是否需要被恢复
+     * @param mappedFile
+     * @return
+     */
     private boolean isMappedFileMatchedRecover(final MappedFile mappedFile) {
         ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
 
